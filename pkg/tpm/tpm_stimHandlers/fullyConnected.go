@@ -1,8 +1,8 @@
 package tpm_stimHandlers
 
-type FullConnectionTPM struct{}
+type FullOverlapTPM struct{}
 
-func (tpm FullConnectionTPM) CreateStimulationStructure(k []int, n_0 int) []int {
+func (tpm FullOverlapTPM) CreateStimulationStructure(k []int, n_0 int) []int {
 	h := len(k)
 	n := make([]int, h)
 
@@ -14,7 +14,7 @@ func (tpm FullConnectionTPM) CreateStimulationStructure(k []int, n_0 int) []int 
 	return n
 }
 
-func (tpm FullConnectionTPM) CreateStimulusFromLayerOutput(outputs []int, k_h int, n_h int) [][]int {
+func (tpm FullOverlapTPM) CreateStimulusFromLayerOutput(outputs []int, k_h int, n_h int) [][]int {
 	new_stimulus := make([][]int, k_h)
 	for i := 0; i < k_h; i++ {
 		new_stimulus[i] = make([]int, n_h)

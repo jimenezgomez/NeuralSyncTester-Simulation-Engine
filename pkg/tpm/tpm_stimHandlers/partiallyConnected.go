@@ -1,8 +1,8 @@
 package tpm_stimHandlers
 
-type PartialConnectionTPM struct{}
+type PartialOverlapTPM struct{}
 
-func (tpm PartialConnectionTPM) CreateStimulationStructure(k []int, n_0 int) []int {
+func (tpm PartialOverlapTPM) CreateStimulationStructure(k []int, n_0 int) []int {
 	prev := -1
 	h := len(k)
 	n := make([]int, h)
@@ -21,7 +21,7 @@ func (tpm PartialConnectionTPM) CreateStimulationStructure(k []int, n_0 int) []i
 	return n
 }
 
-func (tpm PartialConnectionTPM) CreateStimulusFromLayerOutput(outputs []int, k_h int, n_h int) [][]int {
+func (tpm PartialOverlapTPM) CreateStimulusFromLayerOutput(outputs []int, k_h int, n_h int) [][]int {
 	new_stimulus := make([][]int, k_h)
 	for i := 0; i < k_h; i++ {
 		new_stimulus[i] = make([]int, n_h)

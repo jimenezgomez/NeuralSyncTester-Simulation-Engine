@@ -1,5 +1,12 @@
 package tpm_core
 
+import (
+	"crypto/rand"
+	"fmt"
+	"math"
+	"math/big"
+)
+
 func NeuronLocalField(n int, w_k []int, stim_k []int) float64 {
 	dot_prod := 0
 	for i := 0; i < n; i++ {
@@ -49,4 +56,50 @@ func FastInverseSqrt(x float64) float64 {
 
 	y = y * (1.5 - 0.5*x*y*y)
 	return y
+}
+
+// CryptoRandIntn returns a cryptographically secure pseudo-random number in [0, n).
+// It panics if n <= 0.
+// It is safe for concurrent use.
+func CryptoRandIntn_err(n int) (int, error) {
+	if n <= 0 {
+		return 0, fmt.Errorf("argument to CryptoRandIntn must be positive, got %d", n)
+	}
+
+	// big.Int is necessary because crypto/rand.Int operates on arbitrary-precision integers
+	// to handle potentially very large ranges without overflow issues.
+	// We convert the input 'n' to a big.Int.
+	max := big.NewInt(int64(n))
+
+	// crypto/rand.Int generates a cryptographically secure random number in [0, max).
+	// It efficiently avoids modulo bias.
+	result, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, fmt.Errorf("failed to generate crypto random number: %w", err)
+	}
+
+	// Convert the big.Int result back to an int.
+	return int(result.Int64()), nil
+}
+
+// Same as above but for direct replacement into current code
+func CryptoRandIntn(n int) int {
+	if n <= 0 {
+		return 0
+	}
+
+	// big.Int is necessary because crypto/rand.Int operates on arbitrary-precision integers
+	// to handle potentially very large ranges without overflow issues.
+	// We convert the input 'n' to a big.Int.
+	max := big.NewInt(int64(n))
+
+	// crypto/rand.Int generates a cryptographically secure random number in [0, max).
+	// It efficiently avoids modulo bias.
+	result, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0
+	}
+
+	// Convert the big.Int result back to an int.
+	return int(result.Int64())
 }

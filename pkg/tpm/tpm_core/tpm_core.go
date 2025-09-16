@@ -1,10 +1,5 @@
 package tpm_core
 
-import (
-	"math"
-	"math/rand"
-)
-
 func StimulateLayer(stimu [][]int, weights [][]int, k int, n int) []int {
 
 	layerOutputs := make([]int, k)
@@ -31,23 +26,23 @@ func CompareWeights(h int, k []int, n []int, weights_a [][][]int, weights_b [][]
 	return true
 }
 
-func CreateRandomStimulusArray(k int, n int, m int, localRand *rand.Rand) [][]int {
+func CreateRandomStimulusArray(k int, n int, m int) [][]int {
 	stim := make([][]int, k)
 	for i := 0; i < k; i++ {
 		stim[i] = make([]int, n)
 		for j := 0; j < n; j++ {
-			stim[i][j] = (localRand.Intn(2)*2 - 1) * (localRand.Intn(m) + 1)
+			stim[i][j] = (CryptoRandIntn(2)*2 - 1) * (CryptoRandIntn(m) + 1)
 		}
 	}
 	return stim
 }
 
-func CreateRandomLayerWeightsArray(k int, n int, l int, localRand *rand.Rand) [][]int {
+func CreateRandomLayerWeightsArray(k int, n int, l int) [][]int {
 	w := make([][]int, k)
 	for i := 0; i < k; i++ {
 		w[i] = make([]int, n)
 		for j := 0; j < n; j++ {
-			w[i][j] = (localRand.Intn(2)*2 - 1) * (localRand.Intn(l + 1)) // l + 1 because the function goes from [0,l[
+			w[i][j] = (CryptoRandIntn(2)*2 - 1) * (CryptoRandIntn(l + 1)) // l + 1 because the function goes from [0,l[
 		}
 	}
 	return w

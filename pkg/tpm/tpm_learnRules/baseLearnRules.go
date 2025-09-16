@@ -1,6 +1,6 @@
 package tpm_learnRules
 
-import "tpm_sync/tpm_core"
+import "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
 
 type TPMLearnRuleHandler interface {
 	TPMLearnLayer(k int, n int, l int, weights [][]int, stimulus [][]int, outputs []int, output_a int, output_b int)
