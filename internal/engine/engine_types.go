@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -78,6 +79,80 @@ func NewMTPMState(settings MTPMSettings) MTPMState {
 	}
 }
 
+func (s *MTPMState) DeepCopy() *MTPMState {
+	copyState := &MTPMState{
+		NetworkOutput: s.NetworkOutput,
+	}
+
+	// Deep copy Weights
+	if s.Weights != nil {
+		copyState.Weights = make([][][]int, len(s.Weights))
+		for i := range s.Weights {
+			copyState.Weights[i] = make([][]int, len(s.Weights[i]))
+			for j := range s.Weights[i] {
+				copyState.Weights[i][j] = make([]int, len(s.Weights[i][j]))
+				copy(copyState.Weights[i][j], s.Weights[i][j])
+			}
+		}
+	}
+
+	// Deep copy InputBuffer
+	if s.InputBuffer != nil {
+		copyState.InputBuffer = make([][][]int, len(s.InputBuffer))
+		for i := range s.InputBuffer {
+			copyState.InputBuffer[i] = make([][]int, len(s.InputBuffer[i]))
+			for j := range s.InputBuffer[i] {
+				copyState.InputBuffer[i][j] = make([]int, len(s.InputBuffer[i][j]))
+				copy(copyState.InputBuffer[i][j], s.InputBuffer[i][j])
+			}
+		}
+	}
+
+	// Deep copy OutputBuffer
+	if s.OutputBuffer != nil {
+		copyState.OutputBuffer = make([][]int, len(s.OutputBuffer))
+		for i := range s.OutputBuffer {
+			copyState.OutputBuffer[i] = make([]int, len(s.OutputBuffer[i]))
+			copy(copyState.OutputBuffer[i], s.OutputBuffer[i])
+		}
+	}
+
+	return copyState
+}
+
+func (s *MTPMState) String() string {
+	return fmt.Sprintf(
+		"MTPMState{\n  Weights: %v,\n  InputBuffer: %v,\n  OutputBuffer: %v,\n  NetworkOutput: %d\n}",
+		s.Weights, s.InputBuffer, s.OutputBuffer, s.NetworkOutput,
+	)
+}
+
+// Optional: more human-readable nested printing
+func (s *MTPMState) PrettyPrint() string {
+	out := fmt.Sprintf("NetworkOutput: %d\n", s.NetworkOutput)
+
+	out += "Weights:\n"
+	for i, layer := range s.Weights {
+		out += fmt.Sprintf(" Layer %d:\n", i)
+		for j, row := range layer {
+			out += fmt.Sprintf("  Row %d: %v\n", j, row)
+		}
+	}
+	// out += "InputBuffer:\n"
+	// for i, layer := range s.InputBuffer {
+	// 	out += fmt.Sprintf(" Layer %d:\n", i)
+	// 	for j, row := range layer {
+	// 		out += fmt.Sprintf("  Row %d: %v\n", j, row)
+	// 	}
+	// }
+	// out += "OutputBuffer:\n"
+	// for i, row := range s.OutputBuffer {
+	// 	out += fmt.Sprintf(" Row %d: %v\n", i, row)
+	// }
+
+	return out
+}
+
 // Simulation-specific extensions
 type MTPMStateWithHistory struct {
 	MTPMState
@@ -92,12 +167,40 @@ type SimulationInstance struct {
 	LearnIterations     int
 }
 
+func (s *SimulationInstance) DeepCopy() *SimulationInstance {
+	copyInstance := &SimulationInstance{
+		StimulateIterations: s.StimulateIterations,
+		LearnIterations:     s.LearnIterations,
+	}
+
+	// Deep copy both states
+	copyInstance.StateA = *s.StateA.DeepCopy()
+	copyInstance.StateB = *s.StateB.DeepCopy()
+
+	return copyInstance
+}
+
+func (s *SimulationInstance) String() string {
+	return fmt.Sprintf(
+		"SimulationInstance{\n  StateA: %v,\n  StateB: %v,\n  StimulateIterations: %d,\n  LearnIterations: %d\n}",
+		s.StateA, s.StateB, s.StimulateIterations, s.LearnIterations,
+	)
+}
+
+// Optional human-readable
+func (s *SimulationInstance) PrettyPrint() string {
+	out := "StateA:\n" + s.StateA.PrettyPrint() + "\n"
+	out += "StateB:\n" + s.StateB.PrettyPrint() + "\n"
+	out += fmt.Sprintf("StimulateIterations: %d\nLearnIterations: %d\n", s.StimulateIterations, s.LearnIterations)
+	return out
+}
+
 type TrackedMTPMState struct {
 	UID      string
 	settings MTPMSettings
-	latest   atomic.Value // stores []byte (marshaled snapshot)
+	snapshot atomic.Value // stores []byte (marshaled snapshot)
 	subs     map[chan []byte]struct{}
-	subCount int
+	subCount atomic.Int64
 	subsLock sync.RWMutex
 }
 
@@ -106,7 +209,27 @@ func NewTrackedState(settings MTPMSettings) *TrackedMTPMState {
 		UID:      "0",
 		settings: settings,
 		subs:     make(map[chan []byte]struct{}),
-		subCount: 0,
 	}
 	return ts
+}
+
+func (ts *TrackedMTPMState) Subscribe() {
+	ts.subCount.Add(1)
+}
+
+func (ts *TrackedMTPMState) Unsubscribe() {
+	ts.subCount.Add(-1)
+}
+
+func (ts *TrackedMTPMState) UpdateSnapshot(newSnap *SimulationInstance) {
+	ts.snapshot.Store(newSnap)
+}
+
+func (ts *TrackedMTPMState) GetSnapshot() *SimulationInstance {
+	v := ts.snapshot.Load()
+	if v == nil {
+		return nil
+	}
+	// Important: return a deep copy if you don’t trust callers
+	return v.(*SimulationInstance)
 }

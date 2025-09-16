@@ -39,10 +39,10 @@ func SimulateSimpleSync(settings MTPMSettings) SimulationInstance {
 	return simulationInstance
 }
 
-func SimulateTrackedSync(TrackedState *TrackedMTPMState) SimulationInstance {
-	max_iterations := 100_000
-
-	settings := TrackedState.settings
+func SimulateTrackedSync(trackedState *TrackedMTPMState) SimulationInstance {
+	max_iterations := 1_000_000
+	skipIterations := 150
+	settings := trackedState.settings
 
 	simulationInstance := SimulationInstance{
 		StateA:              NewMTPMState(settings),
@@ -50,10 +50,13 @@ func SimulateTrackedSync(TrackedState *TrackedMTPMState) SimulationInstance {
 		StimulateIterations: 0,
 		LearnIterations:     0,
 	}
+	snapshot := simulationInstance.DeepCopy()
+	trackedState.UpdateSnapshot(snapshot)
 
 	syncReached := tpm_core.CompareWeights(settings.H, settings.K, settings.N,
 		simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
 
+	skipCounter := skipIterations
 	for !syncReached {
 		if simulationInstance.StimulateIterations > max_iterations {
 			break
@@ -72,6 +75,18 @@ func SimulateTrackedSync(TrackedState *TrackedMTPMState) SimulationInstance {
 
 		syncReached = tpm_core.CompareWeights(settings.H, settings.K, settings.N,
 			simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
+
+		//TRACKING
+		if trackedState.subCount.Load() > 0 {
+			// Only bother tracking/publishing if someone is listening
+			if skipCounter == 0 {
+				snapshot := simulationInstance.DeepCopy()
+				trackedState.UpdateSnapshot(snapshot)
+				skipCounter = skipIterations
+			}
+			skipCounter--
+		}
+
 	}
 	return simulationInstance
 }
