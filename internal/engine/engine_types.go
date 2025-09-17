@@ -1,9 +1,11 @@
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_learnRules"
@@ -196,12 +198,13 @@ func (s *SimulationInstance) PrettyPrint() string {
 }
 
 type TrackedMTPMState struct {
-	UID      string
-	settings MTPMSettings
-	snapshot atomic.Value // stores []byte (marshaled snapshot)
-	subs     map[chan []byte]struct{}
-	subCount atomic.Int64
-	subsLock sync.RWMutex
+	UID       string
+	StartTime time.Time
+	settings  MTPMSettings
+	snapshot  atomic.Value // stores []byte (marshaled snapshot)
+	subs      map[chan []byte]struct{}
+	subCount  atomic.Int64
+	subsLock  sync.RWMutex
 }
 
 func NewTrackedState(settings MTPMSettings) *TrackedMTPMState {
@@ -213,11 +216,20 @@ func NewTrackedState(settings MTPMSettings) *TrackedMTPMState {
 	return ts
 }
 
-func (ts *TrackedMTPMState) Subscribe() {
+func (ts *TrackedMTPMState) Subscribe(ch chan []byte) {
+
+	ts.subsLock.Lock()
+	ts.subs[ch] = struct{}{}
+	ts.subsLock.Unlock()
+
 	ts.subCount.Add(1)
 }
 
-func (ts *TrackedMTPMState) Unsubscribe() {
+func (ts *TrackedMTPMState) Unsubscribe(ch chan []byte) {
+	ts.subsLock.Lock()
+	delete(ts.subs, ch)
+	ts.subsLock.Unlock()
+
 	ts.subCount.Add(-1)
 }
 
@@ -232,4 +244,26 @@ func (ts *TrackedMTPMState) GetSnapshot() *SimulationInstance {
 	}
 	// Important: return a deep copy if you don’t trust callers
 	return v.(*SimulationInstance)
+}
+
+func (ts *TrackedMTPMState) GetSnapshotRaw() []byte {
+	snap := ts.GetSnapshot()
+	if snap == nil {
+		return nil
+	}
+	data, _ := json.Marshal(snap)
+	return data
+}
+
+func (ts *TrackedMTPMState) UpdateAllSubscribers() {
+	ts.subsLock.RLock()
+	defer ts.subsLock.RUnlock()
+
+	data := ts.GetSnapshotRaw()
+	for subscriber := range ts.subs {
+		select {
+		case subscriber <- data:
+		default: // skip slow/broken client
+		}
+	}
 }

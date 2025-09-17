@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/session_manager"
 	"github.com/spf13/cobra"
 )
+
+var timeToLive = 1 * time.Minute
 
 var cliCmd = &cobra.Command{
 	Use:   "cli",
@@ -14,8 +18,11 @@ var cliCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		settings := engine.NewMTPMSettings([]int{3}, []int{3}, 3, 1, 1, "HEBBIAN", "NO_OVERLAP")
 		trackedState := engine.NewTrackedState(settings)
-		trackedState.Subscribe()
-		defer trackedState.Unsubscribe()
+		sessionManager := session_manager.NewSessionManager(timeToLive)
+		sessionManager.AddMTPM(trackedState.UID, trackedState)
+		ch := make(chan []byte, 10) // small buffer, prevent blocking
+		trackedState.Subscribe(ch)
+		defer trackedState.Unsubscribe(ch)
 
 		go func() {
 			for i := 0; i < 1_000_000; i++ {
@@ -23,12 +30,17 @@ var cliCmd = &cobra.Command{
 			}
 		}()
 
-		ticker := time.NewTicker(50 * time.Millisecond)
-		defer ticker.Stop()
+		for msg := range ch {
+			var snapshot engine.SimulationInstance
+			if err := json.Unmarshal(msg, &snapshot); err != nil {
+				fmt.Println("failed to unmarshal snapshot:", err)
+				continue
+			}
 
-		for range ticker.C {
-			snapshot := trackedState.GetSnapshot()
+			// Now you can access fields directly
+			fmt.Printf("%s\n", trackedState.StartTime.Format(time.ANSIC))
 			fmt.Printf("%s", snapshot.PrettyPrint())
 		}
+
 	},
 }

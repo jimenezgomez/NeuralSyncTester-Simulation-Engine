@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"time"
+
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
 )
 
@@ -52,7 +54,7 @@ func SimulateTrackedSync(trackedState *TrackedMTPMState) SimulationInstance {
 	}
 	snapshot := simulationInstance.DeepCopy()
 	trackedState.UpdateSnapshot(snapshot)
-
+	trackedState.StartTime = time.Now()
 	syncReached := tpm_core.CompareWeights(settings.H, settings.K, settings.N,
 		simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
 
