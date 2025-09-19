@@ -16,6 +16,14 @@ var cliCmd = &cobra.Command{
 	Use:   "cli",
 	Short: "Run a simulation in CLI mode (no SSE)",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// settings_list, baseBatchSettings, err := config_manager.LoadBatchSettingsFromFile("./simulation_settings.json")
+		// if err != nil {
+		// 	fmt.Println(err)
+		// }
+		// fmt.Println(settings_list)
+		// fmt.Println(baseBatchSettings)
+		// return
 		settings := engine.NewMTPMSettings([]int{3}, []int{3}, 3, 1, 1, "HEBBIAN", "NO_OVERLAP")
 		trackedState := engine.NewTrackedState(settings)
 		sessionManager := session_manager.NewSessionManager(timeToLive)
