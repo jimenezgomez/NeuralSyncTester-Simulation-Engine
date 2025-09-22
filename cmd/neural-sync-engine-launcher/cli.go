@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/dbmanager"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/session_manager"
+	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +28,22 @@ var cliCmd = &cobra.Command{
 		// fmt.Println(settings_list)
 		// fmt.Println(baseBatchSettings)
 		// return
+		connString := "postgres://mtpm_user:mtpm_pass@localhost:5432/mtpm_db?sslmode=disable"
+
+		db, err := sql.Open("postgres", connString)
+		if err != nil {
+			panic(err)
+		}
+
+		err = db.Ping()
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println("Connected to Postgres!")
+
+		manager := dbmanager.NewDBManager(db, dbmanager.InsertSessions, 500, 2*time.Second)
+		defer manager.Close(context.Background())
 		settings := engine.NewMTPMSettings([]int{3}, []int{3}, 3, 1, 1, "HEBBIAN", "NO_OVERLAP")
 		trackedState := engine.NewTrackedState(settings)
 		sessionManager := session_manager.NewSessionManager(timeToLive)
@@ -34,7 +54,9 @@ var cliCmd = &cobra.Command{
 
 		go func() {
 			for i := 0; i < 1_000_000; i++ {
-				engine.SimulateTrackedSync(trackedState)
+				result := engine.SimulateTrackedSync(trackedState)
+				sessionLog := dbmanager.NewLogFromResult(result)
+				manager.Add(sessionLog)
 			}
 		}()
 

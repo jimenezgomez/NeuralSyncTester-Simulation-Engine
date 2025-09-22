@@ -162,17 +162,27 @@ type MTPMStateWithHistory struct {
 	HistorySize   int
 }
 
-type SimulationInstance struct {
-	StateA              MTPMState
-	StateB              MTPMState
+type SimulationState struct {
+	StateA MTPMState
+	StateB MTPMState
+}
+
+type SimulationProgress struct {
 	StimulateIterations int
 	LearnIterations     int
 }
 
+type SimulationInstance struct {
+	SimulationState
+	SimulationProgress
+}
+
 func (s *SimulationInstance) DeepCopy() *SimulationInstance {
 	copyInstance := &SimulationInstance{
-		StimulateIterations: s.StimulateIterations,
-		LearnIterations:     s.LearnIterations,
+		SimulationProgress: SimulationProgress{
+			StimulateIterations: s.StimulateIterations,
+			LearnIterations:     s.LearnIterations,
+		},
 	}
 
 	// Deep copy both states
@@ -195,6 +205,16 @@ func (s *SimulationInstance) PrettyPrint() string {
 	out += "StateB:\n" + s.StateB.PrettyPrint() + "\n"
 	out += fmt.Sprintf("StimulateIterations: %d\nLearnIterations: %d\n", s.StimulateIterations, s.LearnIterations)
 	return out
+}
+
+type SimulationResult struct {
+	Settings      MTPMSettings
+	InitialState  SimulationState
+	FinalState    SimulationState
+	Iterations    SimulationProgress
+	SessionStatus string
+	StartTime     time.Time
+	EndTime       time.Time
 }
 
 type TrackedMTPMState struct {

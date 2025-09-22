@@ -25,3 +25,6 @@ func learn(settings MTPMSettings, mtpmState *MTPMState, remoteOutput int) {
 			mtpmState.NetworkOutput, remoteOutput)
 	}
 }
+func GetDataSize(settings MTPMSettings) int {
+	return tpm_core.GetNetworkDataSize(settings.H, settings.K, settings.N)
+}

@@ -10,10 +10,13 @@ func SimulateSimpleSync(settings MTPMSettings) SimulationInstance {
 	max_iterations := 100_000
 
 	simulationInstance := SimulationInstance{
-		StateA:              NewMTPMState(settings),
-		StateB:              NewMTPMState(settings),
-		StimulateIterations: 0,
-		LearnIterations:     0,
+		SimulationState: SimulationState{
+			StateA: NewMTPMState(settings),
+			StateB: NewMTPMState(settings)},
+		SimulationProgress: SimulationProgress{
+			StimulateIterations: 0,
+			LearnIterations:     0,
+		},
 	}
 
 	syncReached := tpm_core.CompareWeights(settings.H, settings.K, settings.N,
@@ -41,19 +44,22 @@ func SimulateSimpleSync(settings MTPMSettings) SimulationInstance {
 	return simulationInstance
 }
 
-func SimulateTrackedSync(trackedState *TrackedMTPMState) SimulationInstance {
+func SimulateTrackedSync(trackedState *TrackedMTPMState) SimulationResult {
 	max_iterations := 1_000_000
 	skipIterations := 150
 	settings := trackedState.settings
 
 	simulationInstance := SimulationInstance{
-		StateA:              NewMTPMState(settings),
-		StateB:              NewMTPMState(settings),
-		StimulateIterations: 0,
-		LearnIterations:     0,
+		SimulationState: SimulationState{
+			StateA: NewMTPMState(settings),
+			StateB: NewMTPMState(settings)},
+		SimulationProgress: SimulationProgress{
+			StimulateIterations: 0,
+			LearnIterations:     0,
+		},
 	}
-	snapshot := simulationInstance.DeepCopy()
-	trackedState.UpdateSnapshot(snapshot)
+	startInstance := simulationInstance.DeepCopy()
+	trackedState.UpdateSnapshot(startInstance)
 	trackedState.StartTime = time.Now()
 	syncReached := tpm_core.CompareWeights(settings.H, settings.K, settings.N,
 		simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
@@ -90,5 +96,21 @@ func SimulateTrackedSync(trackedState *TrackedMTPMState) SimulationInstance {
 		}
 
 	}
-	return simulationInstance
+
+	status := "LIMIT_REACHED"
+	if syncReached {
+		status = "ON_SYNC"
+	}
+
+	result := SimulationResult{
+		Settings:      settings,
+		InitialState:  startInstance.SimulationState,
+		FinalState:    simulationInstance.SimulationState,
+		Iterations:    simulationInstance.SimulationProgress,
+		SessionStatus: status,
+		StartTime:     trackedState.StartTime,
+		EndTime:       time.Now(),
+	}
+
+	return result
 }
