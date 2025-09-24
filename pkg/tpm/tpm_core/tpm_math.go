@@ -7,12 +7,16 @@ import (
 	"math/big"
 )
 
-func NeuronLocalField(n int, w_k []int, stim_k []int) float64 {
+func NeuronLocalFieldRaw(n int, w_k []int, stim_k []int) float64 {
 	dot_prod := 0
 	for i := 0; i < n; i++ {
 		dot_prod += w_k[i] * stim_k[i]
 	}
-	return float64(dot_prod) * FastInverseSqrt(float64(n))
+	return float64(dot_prod)
+}
+
+func NeuronLocalField(n int, w_k []int, stim_k []int) float64 {
+	return NeuronLocalFieldRaw(n, w_k, stim_k) * FastInverseSqrt(float64(n))
 }
 
 func OutputSigma(x float64) int {
@@ -82,7 +86,8 @@ func CryptoRandIntn_err(n int) (int, error) {
 	return int(result.Int64()), nil
 }
 
-// Same as above but for direct replacement into current code
+// CryptoRandIntn returns a cryptographically secure pseudo-random number in [0, n)
+// This function is the same, but for direct replacement into current code
 func CryptoRandIntn(n int) int {
 	if n <= 0 {
 		return 0

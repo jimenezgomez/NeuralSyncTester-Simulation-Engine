@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/dbmanager"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine/attacks"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/session_manager"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
@@ -28,23 +26,23 @@ var cliCmd = &cobra.Command{
 		// fmt.Println(settings_list)
 		// fmt.Println(baseBatchSettings)
 		// return
-		connString := "postgres://mtpm_user:mtpm_pass@localhost:5432/mtpm_db?sslmode=disable"
+		// connString := "postgres://mtpm_user:mtpm_pass@localhost:5432/mtpm_db?sslmode=disable"
 
-		db, err := sql.Open("postgres", connString)
-		if err != nil {
-			panic(err)
-		}
+		// db, err := sql.Open("postgres", connString)
+		// if err != nil {
+		// 	panic(err)
+		// }
 
-		err = db.Ping()
-		if err != nil {
-			panic(err)
-		}
+		// err = db.Ping()
+		// if err != nil {
+		// 	panic(err)
+		// }
 
-		fmt.Println("Connected to Postgres!")
+		// fmt.Println("Connected to Postgres!")
 
-		manager := dbmanager.NewDBManager(db, dbmanager.InsertSessions, 500, 2*time.Second)
-		defer manager.Close(context.Background())
-		settings := engine.NewMTPMSettings([]int{3}, []int{3}, 3, 1, 1, "HEBBIAN", "NO_OVERLAP")
+		// manager := dbmanager.NewDBManager(db, dbmanager.InsertSessions, 500, 2*time.Second)
+		// defer manager.Close(context.Background())
+		settings := engine.NewMTPMSettings([]int{3}, []int{3}, 3, 1, 1, "HEBBIAN", "PARTIAL_OVERLAP")
 		trackedState := engine.NewTrackedState(settings)
 		sessionManager := session_manager.NewSessionManager(timeToLive)
 		sessionManager.AddMTPM(trackedState.UID, trackedState)
@@ -54,9 +52,15 @@ var cliCmd = &cobra.Command{
 
 		go func() {
 			for i := 0; i < 1_000_000; i++ {
-				result := engine.SimulateTrackedSync(trackedState)
-				sessionLog := dbmanager.NewLogFromResult(result)
-				manager.Add(sessionLog)
+				result := attacks.RunTrackedAttack_Geom(trackedState)
+				if result.SessionStatus == "ATTACK_SUCCESS" {
+					fmt.Println("ATTACK SUCCESS - ", i)
+					fmt.Println(result)
+					panic("ERR")
+				}
+				// result := engine.SimulateTrackedSync(trackedState)
+				// sessionLog := dbmanager.NewLogFromResult(result)
+				// manager.Add(sessionLog)
 			}
 		}()
 
@@ -67,7 +71,6 @@ var cliCmd = &cobra.Command{
 				continue
 			}
 
-			// Now you can access fields directly
 			fmt.Printf("%s\n", trackedState.StartTime.Format(time.ANSIC))
 			fmt.Printf("%s", snapshot.PrettyPrint())
 		}

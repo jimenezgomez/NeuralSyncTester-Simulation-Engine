@@ -81,60 +81,60 @@ func NewMTPMState(settings MTPMSettings) MTPMState {
 	}
 }
 
-func (s *MTPMState) DeepCopy() *MTPMState {
+func (mtpmState *MTPMState) DeepCopy() *MTPMState {
 	copyState := &MTPMState{
-		NetworkOutput: s.NetworkOutput,
+		NetworkOutput: mtpmState.NetworkOutput,
 	}
 
 	// Deep copy Weights
-	if s.Weights != nil {
-		copyState.Weights = make([][][]int, len(s.Weights))
-		for i := range s.Weights {
-			copyState.Weights[i] = make([][]int, len(s.Weights[i]))
-			for j := range s.Weights[i] {
-				copyState.Weights[i][j] = make([]int, len(s.Weights[i][j]))
-				copy(copyState.Weights[i][j], s.Weights[i][j])
+	if mtpmState.Weights != nil {
+		copyState.Weights = make([][][]int, len(mtpmState.Weights))
+		for i := range mtpmState.Weights {
+			copyState.Weights[i] = make([][]int, len(mtpmState.Weights[i]))
+			for j := range mtpmState.Weights[i] {
+				copyState.Weights[i][j] = make([]int, len(mtpmState.Weights[i][j]))
+				copy(copyState.Weights[i][j], mtpmState.Weights[i][j])
 			}
 		}
 	}
 
 	// Deep copy InputBuffer
-	if s.InputBuffer != nil {
-		copyState.InputBuffer = make([][][]int, len(s.InputBuffer))
-		for i := range s.InputBuffer {
-			copyState.InputBuffer[i] = make([][]int, len(s.InputBuffer[i]))
-			for j := range s.InputBuffer[i] {
-				copyState.InputBuffer[i][j] = make([]int, len(s.InputBuffer[i][j]))
-				copy(copyState.InputBuffer[i][j], s.InputBuffer[i][j])
+	if mtpmState.InputBuffer != nil {
+		copyState.InputBuffer = make([][][]int, len(mtpmState.InputBuffer))
+		for i := range mtpmState.InputBuffer {
+			copyState.InputBuffer[i] = make([][]int, len(mtpmState.InputBuffer[i]))
+			for j := range mtpmState.InputBuffer[i] {
+				copyState.InputBuffer[i][j] = make([]int, len(mtpmState.InputBuffer[i][j]))
+				copy(copyState.InputBuffer[i][j], mtpmState.InputBuffer[i][j])
 			}
 		}
 	}
 
 	// Deep copy OutputBuffer
-	if s.OutputBuffer != nil {
-		copyState.OutputBuffer = make([][]int, len(s.OutputBuffer))
-		for i := range s.OutputBuffer {
-			copyState.OutputBuffer[i] = make([]int, len(s.OutputBuffer[i]))
-			copy(copyState.OutputBuffer[i], s.OutputBuffer[i])
+	if mtpmState.OutputBuffer != nil {
+		copyState.OutputBuffer = make([][]int, len(mtpmState.OutputBuffer))
+		for i := range mtpmState.OutputBuffer {
+			copyState.OutputBuffer[i] = make([]int, len(mtpmState.OutputBuffer[i]))
+			copy(copyState.OutputBuffer[i], mtpmState.OutputBuffer[i])
 		}
 	}
 
 	return copyState
 }
 
-func (s *MTPMState) String() string {
+func (mtpmState *MTPMState) String() string {
 	return fmt.Sprintf(
 		"MTPMState{\n  Weights: %v,\n  InputBuffer: %v,\n  OutputBuffer: %v,\n  NetworkOutput: %d\n}",
-		s.Weights, s.InputBuffer, s.OutputBuffer, s.NetworkOutput,
+		mtpmState.Weights, mtpmState.InputBuffer, mtpmState.OutputBuffer, mtpmState.NetworkOutput,
 	)
 }
 
 // Optional: more human-readable nested printing
-func (s *MTPMState) PrettyPrint() string {
-	out := fmt.Sprintf("NetworkOutput: %d\n", s.NetworkOutput)
+func (mtpmState *MTPMState) PrettyPrint() string {
+	out := fmt.Sprintf("NetworkOutput: %d\n", mtpmState.NetworkOutput)
 
 	out += "Weights:\n"
-	for i, layer := range s.Weights {
+	for i, layer := range mtpmState.Weights {
 		out += fmt.Sprintf(" Layer %d:\n", i)
 		for j, row := range layer {
 			out += fmt.Sprintf("  Row %d: %v\n", j, row)
@@ -153,13 +153,6 @@ func (s *MTPMState) PrettyPrint() string {
 	// }
 
 	return out
-}
-
-// Simulation-specific extensions
-type MTPMStateWithHistory struct {
-	MTPMState
-	OutputHistory []int
-	HistorySize   int
 }
 
 type SimulationState struct {
@@ -286,4 +279,12 @@ func (ts *TrackedMTPMState) UpdateAllSubscribers() {
 		default: // skip slow/broken client
 		}
 	}
+}
+
+func (ts *TrackedMTPMState) GetSubCount() int64 {
+	return ts.subCount.Load()
+}
+
+func (ts *TrackedMTPMState) GetSettings() MTPMSettings {
+	return ts.settings
 }

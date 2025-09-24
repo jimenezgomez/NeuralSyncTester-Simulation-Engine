@@ -28,18 +28,18 @@ func SimulateSimpleSync(settings MTPMSettings) SimulationInstance {
 		}
 
 		input_stimulus := tpm_core.CreateRandomStimulusArray(settings.K[0], settings.N[0], settings.M)
-		stimulate(settings, &simulationInstance.StateA, input_stimulus)
-		stimulate(settings, &simulationInstance.StateB, input_stimulus)
+		simulationInstance.StateA.Stimulate(settings, input_stimulus)
+		simulationInstance.StateB.Stimulate(settings, input_stimulus)
 		simulationInstance.StimulateIterations += 1
 
 		if simulationInstance.StateA.NetworkOutput == simulationInstance.StateB.NetworkOutput {
-			learn(settings, &simulationInstance.StateA, simulationInstance.StateB.NetworkOutput)
-			learn(settings, &simulationInstance.StateB, simulationInstance.StateA.NetworkOutput)
+			simulationInstance.StateA.Learn(settings, simulationInstance.StateB.NetworkOutput)
+			simulationInstance.StateB.Learn(settings, simulationInstance.StateA.NetworkOutput)
+
 			simulationInstance.LearnIterations += 1
 		}
 
-		syncReached = tpm_core.CompareWeights(settings.H, settings.K, settings.N,
-			simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
+		syncReached = CompareWeights(settings, simulationInstance.StateA, simulationInstance.StateB)
 	}
 	return simulationInstance
 }
@@ -71,16 +71,16 @@ func SimulateTrackedSync(trackedState *TrackedMTPMState) SimulationResult {
 		}
 
 		input_stimulus := tpm_core.CreateRandomStimulusArray(settings.K[0], settings.N[0], settings.M)
-		stimulate(settings, &simulationInstance.StateA, input_stimulus)
-		stimulate(settings, &simulationInstance.StateB, input_stimulus)
+		simulationInstance.StateA.Stimulate(settings, input_stimulus)
+		simulationInstance.StateB.Stimulate(settings, input_stimulus)
 		simulationInstance.StimulateIterations += 1
 
 		if simulationInstance.StateA.NetworkOutput == simulationInstance.StateB.NetworkOutput {
-			learn(settings, &simulationInstance.StateA, simulationInstance.StateB.NetworkOutput)
-			learn(settings, &simulationInstance.StateB, simulationInstance.StateA.NetworkOutput)
+			simulationInstance.StateA.Learn(settings, simulationInstance.StateB.NetworkOutput)
+			simulationInstance.StateB.Learn(settings, simulationInstance.StateA.NetworkOutput)
+
 			simulationInstance.LearnIterations += 1
 		}
-
 		syncReached = tpm_core.CompareWeights(settings.H, settings.K, settings.N,
 			simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
 
