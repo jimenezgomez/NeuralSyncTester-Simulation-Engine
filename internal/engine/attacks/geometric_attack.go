@@ -28,7 +28,7 @@ func NewGeomAttack(attackSettings AttackSettings, simulationInstance engine.Simu
 func ExecGeomAttack(settings AttackSettings, sessionState AttackInstance, output_A, output_B int, input_stimulus [][]int) {
 	for _, v := range sessionState.attackerStates {
 		v.Stimulate(settings.MTPMSettings, input_stimulus)
-		learnGeomAttackReduced(settings, v, output_A, output_B)
+		learnGeomAttack(settings, v, output_A, output_B)
 	}
 }
 
@@ -47,12 +47,13 @@ func CheckGeomAttack(settings AttackSettings, sessionState AttackInstance) int {
 	return state
 }
 
-func learnGeomAttackReduced(settings AttackSettings, attacker *AttackerState, output_A, output_B int) {
+func learnGeomAttack(settings AttackSettings, attacker *AttackerState, output_A, output_B int) {
 
 	if attacker.NetworkOutput != output_A {
 		flipLowestLocalField(settings.MTPMSettings, attacker)
 	}
-	attacker.Learn(settings.MTPMSettings, output_A) //"... then the attacker updates C by the usual learning rule."
+	attacker.Learn(settings.MTPMSettings, output_A) //"... then the attacker updates C by the usual learning rule.
+	// 	- so i guess it is not like the naive attacker and we use the local output?"
 
 }
 

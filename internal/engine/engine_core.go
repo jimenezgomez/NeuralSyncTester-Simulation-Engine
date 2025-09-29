@@ -44,6 +44,16 @@ func (mtpmState *MTPMState) LearnWithOutputs(settings MTPMSettings, output_A, ou
 	}
 }
 
+func (mtpmState *MTPMState) LearnWithFullReference(settings MTPMSettings, output_A, output_B int, referenceOutputBuffer *[][]int) {
+	for layer := 0; layer < settings.H; layer++ {
+		settings.learnRuleHandler.TPMLearnLayer(
+			settings.K[layer], settings.N[layer], settings.L,
+			mtpmState.Weights[layer],
+			mtpmState.InputBuffer[layer], (*referenceOutputBuffer)[layer],
+			output_A, output_B)
+	}
+}
+
 func GetDataSize(settings MTPMSettings) int {
 	return tpm_core.GetNetworkDataSize(settings.H, settings.K, settings.N)
 }
