@@ -52,7 +52,7 @@ var cliCmd = &cobra.Command{
 
 		go func() {
 			for i := 0; i < 1_000_000; i++ {
-				result := attacks.RunTrackedAttack_Maj(trackedState)
+				result := attacks.RunTrackedAttack(trackedState, "MAJORITY")
 				if result.SessionStatus == "ATTACK_SUCCESS" {
 					fmt.Println("ATTACK SUCCESS - ", i)
 					fmt.Println(result)

@@ -32,7 +32,7 @@ func NewMajorityAttack(attackSettings AttackSettings, simulationInstance engine.
 // Note: The original attack proposal says "after a waiting time of about 1/3 of the entire synhronization time"
 var START_PHASE_THRESHOLD = 100
 
-func ExecMajorityAttack(settings AttackSettings, sessionState AttackInstance, output_A, output_B int, input_stimulus [][]int) {
+func ExecMajorityAttack(settings *AttackSettings, sessionState *AttackInstance, output_A, output_B int, input_stimulus [][]int) {
 	operationIndex := sessionState.StimulateIterations & 1
 
 	//"In every odd time step we perform the regular skipping attack,
@@ -45,7 +45,7 @@ func ExecMajorityAttack(settings AttackSettings, sessionState AttackInstance, ou
 			learnGeomAttack(settings, attacker, output_A, output_B)
 		}
 	} else {
-		referenceCombination := getMostCommonCombination(settings, sessionState.attackerStates, input_stimulus, output_A)
+		referenceCombination := getMostCommonCombination(*settings, sessionState.attackerStates, input_stimulus, output_A)
 		for _, attacker := range sessionState.attackerStates {
 			attacker.Stimulate(settings.MTPMSettings, input_stimulus)
 			attacker.LearnWithFullReference(settings.MTPMSettings, output_A, output_B, referenceCombination)
@@ -54,7 +54,7 @@ func ExecMajorityAttack(settings AttackSettings, sessionState AttackInstance, ou
 
 }
 
-func CheckMajorityAttack(settings AttackSettings, sessionState AttackInstance) int {
+func CheckMajorityAttack(settings *AttackSettings, sessionState *AttackInstance) int {
 	state := 0
 	if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, sessionState.StateB) {
 		state = 1

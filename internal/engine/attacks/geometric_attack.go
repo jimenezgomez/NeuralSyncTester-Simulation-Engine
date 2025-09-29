@@ -25,14 +25,14 @@ func NewGeomAttack(attackSettings AttackSettings, simulationInstance engine.Simu
 	return attackInstance
 }
 
-func ExecGeomAttack(settings AttackSettings, sessionState AttackInstance, output_A, output_B int, input_stimulus [][]int) {
+func ExecGeomAttack(settings *AttackSettings, sessionState *AttackInstance, output_A, output_B int, input_stimulus [][]int) {
 	for _, v := range sessionState.attackerStates {
 		v.Stimulate(settings.MTPMSettings, input_stimulus)
 		learnGeomAttack(settings, v, output_A, output_B)
 	}
 }
 
-func CheckGeomAttack(settings AttackSettings, sessionState AttackInstance) int {
+func CheckGeomAttack(settings *AttackSettings, sessionState *AttackInstance) int {
 	state := 0
 	if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, sessionState.StateB) {
 		state = 1
@@ -47,7 +47,7 @@ func CheckGeomAttack(settings AttackSettings, sessionState AttackInstance) int {
 	return state
 }
 
-func learnGeomAttack(settings AttackSettings, attacker *AttackerState, output_A, output_B int) {
+func learnGeomAttack(settings *AttackSettings, attacker *AttackerState, output_A, output_B int) {
 
 	if attacker.NetworkOutput != output_A {
 		flipLowestLocalField(settings.MTPMSettings, attacker)

@@ -35,6 +35,6 @@ type AttackResult struct {
 	EndTime       time.Time
 }
 
-type AttackExec func(settings AttackSettings, sessionState AttackInstance, output_A, output_B int, input_stimulus [][]int)
+type AttackExec func(settings *AttackSettings, sessionState *AttackInstance, output_A, output_B int, input_stimulus [][]int)
 
-type AttackCheck func(settings AttackSettings, sessionState AttackInstance) int
+type AttackCheck func(settings *AttackSettings, sessionState *AttackInstance) int

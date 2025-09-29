@@ -22,14 +22,14 @@ func NewSimpleAttack(attackSettings AttackSettings, simulationInstance engine.Si
 	return attackInstance
 }
 
-func ExecSimpleAttack(settings AttackSettings, sessionState AttackInstance, output_A, output_B int, input_stimulus [][]int) {
+func ExecSimpleAttack(settings *AttackSettings, sessionState *AttackInstance, output_A, output_B int, input_stimulus [][]int) {
 	for _, v := range sessionState.attackerStates {
 		v.Stimulate(settings.MTPMSettings, input_stimulus)
 		v.LearnWithOutputs(settings.MTPMSettings, output_A, output_B)
 	}
 }
 
-func CheckSimpleAttack(settings AttackSettings, sessionState AttackInstance) int {
+func CheckSimpleAttack(settings *AttackSettings, sessionState *AttackInstance) int {
 	state := 0
 	if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, sessionState.StateB) {
 		state = 1
