@@ -71,12 +71,12 @@ func InsertAttackSessions(ctx context.Context, db *sql.DB, sessions []AttackSess
 			network_size, first_k, first_n, last_k, last_n,
 			start_time, end_time, stimulate_iterations, learn_iterations,
 			k, n, l, m, h, learn_rule, scenario,
-			attack_type, attacker_count, session_status
+			attack_type, attacker_count, attacker_scores, session_status
 		) VALUES (
 			$1,$2,$3,$4,$5,
 			$6,$7,$8,$9,
 			$10,$11,$12,$13,$14,$15,$16,
-			$17,$18,$19
+			$17,$18,$19,$20
 		)
 	`)
 	if err != nil {
@@ -92,7 +92,7 @@ func InsertAttackSessions(ctx context.Context, db *sql.DB, sessions []AttackSess
 			s.NetworkSize, s.FirstK, s.FirstN, s.LastK, s.LastN,
 			s.StartTime, s.EndTime, s.StimulateIterations, s.LearnIterations,
 			kBytes, nBytes, s.L, s.M, s.H, s.LearnRule, s.Scenario,
-			s.AttackType, s.AttackerCountLimit, s.SessionStatus,
+			s.AttackType, s.AttackerCountLimit, s.AttackerScores, s.SessionStatus,
 		)
 		if err != nil {
 			return err

@@ -45,6 +45,10 @@ func NewAttackSessionLog(result attacks.AttackResult) (AttackSessionLog, error) 
 	if err != nil {
 		return AttackSessionLog{}, err
 	}
+	scoresBytes, err := json.Marshal(result.AttackerScores)
+	if err != nil {
+		return AttackSessionLog{}, err
+	}
 
 	return AttackSessionLog{
 		NetworkSize:         engine.GetDataSize(mtpmSettings),
@@ -65,7 +69,7 @@ func NewAttackSessionLog(result attacks.AttackResult) (AttackSessionLog, error) 
 		Scenario:            mtpmSettings.Scenario,
 		AttackType:          attSettings.AttackType,
 		AttackerCountLimit:  attSettings.AttackerLimit,
-		AttackerScores:      result.AttackerScores,
+		AttackerScores:      scoresBytes,
 		SessionStatus:       result.SessionStatus,
 	}, nil
 }

@@ -2,6 +2,7 @@ package config_manager
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_stimHandlers"
@@ -42,7 +43,7 @@ func (settings BatchOverlappedSettings) UnwrapBatchSettings(configList *[]engine
 	for _, k := range settings.KConfigs {
 		for _, n_0 := range settings.N0Configs {
 			var N []int
-			switch settings.Scenario {
+			switch strings.ToUpper(settings.Scenario) {
 			case "FULL_OVERLAP":
 				N = tpm_stimHandlers.FullOverlapTPM{}.CreateStimulationStructure(k, n_0)
 			case "PARTIAL_OVERLAP":

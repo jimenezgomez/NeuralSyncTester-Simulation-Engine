@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS attack_sessions (
     scenario TEXT,
     attack_type TEXT,
     attacker_count INTEGER,
+    attacker_scores JSONB,
     session_status TEXT
 );
 
