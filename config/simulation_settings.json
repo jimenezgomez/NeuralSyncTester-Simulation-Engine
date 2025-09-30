@@ -3,17 +3,13 @@
     "max_session_count": 100,
     "max_iterations": 1000000,
     "max_worker_count": 12,
-    "m_configs": [1,2,3,4,5],
-    "l_configs": [3,4,5,6],
+    "m_configs": [1],
+    "l_configs": [3],
     "learn_rules": [
-        "Hebbian",
-        "Anti-Hebbian",
-        "Random-Walk"
+        "Hebbian"
   ],
     "n_configs": [
-        [7,8],
-        [2,5,4],
-        [4,3,4]
+        [7,8]
     ],
     "klast_configs": [2]
 }

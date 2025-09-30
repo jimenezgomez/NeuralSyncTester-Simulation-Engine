@@ -41,6 +41,14 @@ func GetMaxSimulations() int {
 	return val
 }
 
+func LoadPBApiKey() string {
+	apiKey, ok := os.LookupEnv("PB_APIKEY")
+	if !ok {
+		log.Fatal("missing environment variable: PB_APIKEY")
+	}
+	return apiKey
+}
+
 // LoadDBEnv tries to read variables from environment and logs fatal if missing
 func LoadDBEnv() DBEnvConfig {
 	host, ok := os.LookupEnv("DB_HOST")
