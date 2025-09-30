@@ -1,32 +1,17 @@
-version: '3.8'
-services: 
-  database:
-    image: mysql:lts
-    restart: always
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: nst_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_RANDOM_ROOT_PASSWORD: true 
-    volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./mysql/db/:/var/lib/mysql/
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h127.0.0.1", "-uroot", "-p${MYSQL_PASSWORD}"]
-      interval: 10s
-      retries: 5
-      start_period: 30s
-      timeout: 10s
-  
-  simulation_service:
-    image: rjimenezucn/go_sim_server:latest
-    ports:
-      - "8080:8080"
-    depends_on:
-      database:
-        condition: service_healthy
+      - "${DB_PORT}:5432"
     volumes:
-      - ./.env:/app/.env
-      - ./simulation_settings.json:/app/simulation_settings.json
+      - ./pgdata:/var/lib/postgresql/data
