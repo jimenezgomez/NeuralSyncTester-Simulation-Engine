@@ -32,6 +32,9 @@ func ScanAndLoadBatchSettings(rootDir string) ([]BatchSettingsResult, error) {
 
 		if filepath.Ext(path) == ".json" {
 			settingsList, baseBatchSettings, err := LoadBatchSettingsFromFile(path)
+			if err != nil {
+				return err
+			}
 			results = append(results, BatchSettingsResult{
 				Path:              path,
 				SettingsList:      settingsList,

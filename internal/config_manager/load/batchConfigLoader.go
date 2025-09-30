@@ -38,7 +38,7 @@ func LoadBatchSettingsFromFile(filename string) ([]engine.MTPMSettings, *config_
 		}
 		return ListBatchSettings(s), &s.BaseBatchSettings, nil
 	default:
-		return nil, nil, fmt.Errorf("unknown tpm_type: %s", wrapper.Scenario)
+		return nil, nil, fmt.Errorf("unknown scenario: %s", wrapper.Scenario)
 	}
 }
 
