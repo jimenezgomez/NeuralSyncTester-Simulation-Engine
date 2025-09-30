@@ -4,6 +4,7 @@ package config_manager
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -23,6 +24,21 @@ func InitEnv() {
 	if err := godotenv.Load(".env"); err != nil {
 		log.Println("No .env file found, falling back to system env")
 	}
+}
+
+func GetMaxSimulations() int {
+	valStr := os.Getenv("MAX_SIMULATIONS")
+	if valStr == "" {
+		log.Println("MAX_SIMULATIONS not set, using default 10")
+		return 10 // default value
+	}
+
+	val, err := strconv.Atoi(valStr)
+	if err != nil {
+		log.Fatalf("Invalid MAX_SIMULATIONS value: %s", valStr)
+	}
+
+	return val
 }
 
 // LoadDBEnv tries to read variables from environment and logs fatal if missing

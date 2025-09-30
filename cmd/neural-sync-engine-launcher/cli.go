@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
@@ -12,6 +13,7 @@ import (
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine/attacks"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/session_manager"
 	_ "github.com/lib/pq"
+	"github.com/sourcegraph/conc/pool"
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +29,8 @@ var cliCmd = &cobra.Command{
 	Short: "Run a simulation in CLI mode (no SSE)",
 	Run: func(cmd *cobra.Command, args []string) {
 		config_manager.InitEnv()
+		maxSimulations := config_manager.GetMaxSimulations()
+		simulationPool := pool.New().WithMaxGoroutines(maxSimulations)
 		envConfig := config_manager.LoadDBEnv()
 		connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", //TODO: add SSL toggle in env
 			envConfig.User, envConfig.Pass, envConfig.Host, envConfig.Port, envConfig.Name)
@@ -38,7 +42,7 @@ var cliCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("Connected to Postgres!")
+		log.Println("Connected to Postgres!")
 
 		datamanager = dbmanager.NewDBManager(db, dbmanager.InsertAttackSessions, 500, 2*time.Second)
 		defer datamanager.Close(context.Background())
@@ -47,7 +51,7 @@ var cliCmd = &cobra.Command{
 
 		batchGroup, err := config_manager.ScanAndLoadBatchSettings("./config")
 		if err != nil {
-			fmt.Println(err)
+			log.Fatalf("Error occurred: %v", err)
 		}
 		for _, batchCollected := range batchGroup {
 			if batchCollected.Err != nil {
@@ -57,8 +61,12 @@ var cliCmd = &cobra.Command{
 			fmt.Println(batchCollected.Path)
 			fmt.Println(len(batchCollected.SettingsList))
 			for _, mtpmSettings := range batchCollected.SettingsList {
-				RunInstance(mtpmSettings)
+				simulationPool.Go(func() { RunInstance(mtpmSettings) })
 			}
+		}
+
+		if err := simulationPool.WithErrors().Wait(); err != nil {
+			log.Fatalf("Error occurred: %v", err)
 		}
 
 		// trackedState.Subscribe(ch)
@@ -82,8 +90,8 @@ func RunInstance(settings engine.MTPMSettings) {
 	sessionManager.AddMTPM(trackedState.UID, trackedState)
 	defer sessionManager.DeleteMTPM(trackedState.UID)
 
-	for i := 0; i < SYNC_REPETITIONS; i++ {
-		for _, attack_type := range AttackModes {
+	for _, attack_type := range AttackModes {
+		for i := 0; i < SYNC_REPETITIONS; i++ {
 			result := attacks.RunTrackedAttack(trackedState, attack_type)
 			sessionLog, err := dbmanager.NewAttackSessionLog(result)
 			if err != nil {
