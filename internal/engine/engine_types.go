@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,6 +29,9 @@ func NewMTPMSettings(K, N []int, L, M, H int, learnRule, scenario string) MTPMSe
 	var stimHandler tpm_stimHandlers.TPMStimulationHandlers
 	var ruleHandler tpm_learnRules.TPMLearnRuleHandler
 
+	scenario = strings.ToUpper(strings.TrimSpace(scenario))
+	learnRule = strings.ToUpper(strings.TrimSpace(learnRule))
+
 	switch scenario {
 	case "NO_OVERLAP", "NO OVERLAP":
 		stimHandler = tpm_stimHandlers.NoOverlapTPM{}
@@ -35,6 +39,8 @@ func NewMTPMSettings(K, N []int, L, M, H int, learnRule, scenario string) MTPMSe
 		stimHandler = tpm_stimHandlers.PartialOverlapTPM{}
 	case "FULL_OVERLAP", "FULL OVERLAP", "FULLY_CONNECTED", "FULLY CONNECTED":
 		stimHandler = tpm_stimHandlers.FullOverlapTPM{}
+	default:
+		panic("No valid scenario was selected.")
 
 	}
 
@@ -45,6 +51,8 @@ func NewMTPMSettings(K, N []int, L, M, H int, learnRule, scenario string) MTPMSe
 		ruleHandler = tpm_learnRules.AntiHebbianLearnRule{}
 	case "RANDOM-WALK", "RANDOM", "RANDOMWALK", "RANDOM WALK":
 		ruleHandler = tpm_learnRules.RandomWalkLearnRule{}
+	default:
+		panic("No valid learning rule was selected.")
 	}
 
 	return MTPMSettings{

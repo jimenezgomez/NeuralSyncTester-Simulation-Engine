@@ -8,14 +8,14 @@ import (
 
 type AttackSettings struct {
 	engine.MTPMSettings
-	attackerLimit int
-	attackType    string
+	AttackerLimit int
+	AttackType    string
 }
 
 type AttackerState struct {
 	engine.MTPMState
 	attackerScore int     //The score based on the attack type
-	weightScore   float32 //The score based on the dot product
+	weightScore   float64 //The score based on the dot product
 
 }
 
@@ -28,11 +28,12 @@ type AttackInstance struct {
 }
 
 type AttackResult struct {
-	Settings      AttackSettings
-	FinalState    engine.SimulationInstance
-	SessionStatus string
-	StartTime     time.Time
-	EndTime       time.Time
+	Settings       AttackSettings
+	FinalState     engine.SimulationInstance
+	AttackerScores []float64
+	SessionStatus  string
+	StartTime      time.Time
+	EndTime        time.Time
 }
 
 type AttackExec func(settings *AttackSettings, sessionState *AttackInstance, output_A, output_B int, input_stimulus [][]int)

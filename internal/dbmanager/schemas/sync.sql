@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE IF NOT EXISTS sync_sessions (
     id BIGSERIAL PRIMARY KEY,
     network_size INTEGER,
     first_k INTEGER,
@@ -21,14 +21,11 @@ CREATE TABLE IF NOT EXISTS sessions (
     session_status TEXT
 );
 
--- Primary index for your main filters
 CREATE INDEX idx_sessions_scenario_rule_h
     ON sessions (scenario, learn_rule, h);
 CREATE INDEX idx_sessions_scenario_rule_size
     ON sessions (scenario, learn_rule, network_size);
 
-
--- Optional narrower indexes if queries justify it
 CREATE INDEX idx_sessions_scenario_rule
     ON sessions (scenario, learn_rule);
 

@@ -77,7 +77,6 @@ func (m *DBManager[T]) Flush(ctx context.Context) {
 	batch := m.buffer
 	m.buffer = make([]T, 0, m.maxBatchSize)
 	m.mu.Unlock()
-
 	if err := m.insertFunc(ctx, m.db, batch); err != nil {
 		// TODO: logging / retry policy
 		fmt.Println("ERROR INSERTING INTO DB!")

@@ -1,6 +1,7 @@
 package attacks
 
 import (
+	"sort"
 	"strings"
 	"time"
 
@@ -8,15 +9,18 @@ import (
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
 )
 
-func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) engine.SimulationResult {
-	max_iterations := 100_000
-	skipIterations := 150
+const ITERATION_LIMIT = 100_000
+const TRACKING_SKIP_ITERATIONS = 150 //Skip n iterations before sending a new attackerState
+const DEFAULT_ATT_LIMIT = 100        //We will use this many attackers. (All implemented attacks use up to the limit)
+const STORE_TOP_ATT_LIMIT = 10       //only save the best 10 attackers
+
+func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) AttackResult {
 	settings := trackedState.GetSettings()
 
 	attackSettings := AttackSettings{
 		MTPMSettings:  settings,
-		attackerLimit: 10,
-		attackType:    attackType,
+		AttackerLimit: DEFAULT_ATT_LIMIT,
+		AttackType:    attackType,
 	}
 
 	simulationInstance := engine.SimulationInstance{
@@ -31,7 +35,7 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) 
 
 	attackInstance := CreateAttackInstance(simulationInstance, attackSettings)
 	if attackInstance == nil {
-		panic("The requested attack type was not found. - " + attackSettings.attackType)
+		panic("The requested attack type was not found. - " + attackSettings.AttackType)
 	}
 
 	startInstance := simulationInstance.DeepCopy()
@@ -41,9 +45,9 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) 
 		simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
 
 	checkResult := 0
-	skipCounter := skipIterations
+	skipCounter := TRACKING_SKIP_ITERATIONS
 	for !syncReached {
-		if simulationInstance.StimulateIterations > max_iterations {
+		if simulationInstance.StimulateIterations > ITERATION_LIMIT {
 			break
 		}
 
@@ -73,7 +77,7 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) 
 			if skipCounter == 0 {
 				snapshot := simulationInstance.DeepCopy()
 				trackedState.UpdateSnapshot(snapshot)
-				skipCounter = skipIterations
+				skipCounter = TRACKING_SKIP_ITERATIONS
 			}
 			skipCounter--
 		}
@@ -88,14 +92,20 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) 
 		status = "ATTACK_SUCCESS"
 	}
 
-	result := engine.SimulationResult{
-		Settings:      settings,
-		InitialState:  startInstance.SimulationState,
-		FinalState:    simulationInstance.SimulationState,
-		Iterations:    simulationInstance.SimulationProgress,
-		SessionStatus: status,
-		StartTime:     trackedState.StartTime,
-		EndTime:       time.Now(),
+	SetAttackerWeightScores(attackSettings, *attackInstance)
+	topAttackers := GetTopAttackersByWeight(*attackInstance)
+	topScores := make([]float64, STORE_TOP_ATT_LIMIT)
+	for i := range STORE_TOP_ATT_LIMIT {
+		topScores[i] = topAttackers[i].weightScore
+	}
+
+	result := AttackResult{
+		Settings:       attackSettings,
+		FinalState:     simulationInstance,
+		SessionStatus:  status,
+		StartTime:      trackedState.StartTime,
+		EndTime:        time.Now(),
+		AttackerScores: topScores,
 	}
 
 	return result
@@ -108,8 +118,27 @@ func StimulateAllAttackers(settings AttackSettings, instance AttackInstance, inp
 	}
 }
 
+func SetAttackerWeightScores(settings AttackSettings, instance AttackInstance) {
+	for _, attacker := range instance.attackerStates {
+		attacker.weightScore = tpm_core.CosineSimWeights(settings.H, settings.K, settings.N, instance.StateA.Weights, attacker.Weights)
+	}
+}
+
+func GetTopAttackersByWeight(instance AttackInstance) []*AttackerState {
+	// Make a copy of the slice of pointers
+	attackers := make([]*AttackerState, len(instance.attackerStates))
+	copy(attackers, instance.attackerStates)
+
+	// Sort in-place by weightScore (highest first)
+	sort.Slice(attackers, func(i, j int) bool {
+		return attackers[i].weightScore > attackers[j].weightScore
+	})
+
+	return attackers
+}
+
 func CreateAttackInstance(simulationInstance engine.SimulationInstance, attackSettings AttackSettings) *AttackInstance {
-	switch strings.ToUpper(attackSettings.attackType) {
+	switch strings.ToUpper(attackSettings.AttackType) {
 	case "SIMPLE", "NAIVE":
 		attackInstance := NewSimpleAttack(attackSettings, simulationInstance)
 		return &attackInstance

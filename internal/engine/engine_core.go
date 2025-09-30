@@ -1,6 +1,8 @@
 package engine
 
-import "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
+import (
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
+)
 
 func (mtpmState *MTPMState) Stimulate(settings MTPMSettings, firstLayerInput [][]int) {
 	inputs := mtpmState.InputBuffer

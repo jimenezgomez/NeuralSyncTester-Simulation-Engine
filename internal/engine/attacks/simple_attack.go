@@ -5,7 +5,7 @@ import (
 )
 
 func NewSimpleAttack(attackSettings AttackSettings, simulationInstance engine.SimulationInstance) AttackInstance {
-	attackerCount := attackSettings.attackerLimit
+	attackerCount := attackSettings.AttackerLimit
 	attackers := make([]*AttackerState, attackerCount)
 	for i := 0; i < attackerCount; i++ {
 		attackers[i] = &AttackerState{

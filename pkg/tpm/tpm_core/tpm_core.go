@@ -1,5 +1,7 @@
 package tpm_core
 
+import "math"
+
 func StimulateLayer(stimu [][]int, weights [][]int, k int, n int) []int {
 
 	layerOutputs := make([]int, k)
@@ -12,7 +14,7 @@ func StimulateLayer(stimu [][]int, weights [][]int, k int, n int) []int {
 	return layerOutputs
 }
 
-func CompareWeights(h int, k []int, n []int, weights_a [][][]int, weights_b [][][]int) bool {
+func CompareWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) bool {
 	for layer := 0; layer < h; layer++ {
 		for i := 0; i < k[layer]; i++ {
 			for j := 0; j < n[layer]; j++ {
@@ -24,6 +26,44 @@ func CompareWeights(h int, k []int, n []int, weights_a [][][]int, weights_b [][]
 	}
 
 	return true
+}
+
+func DotProdWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) int {
+	sum := 0
+	for layer := 0; layer < h; layer++ {
+		for i := 0; i < k[layer]; i++ {
+			for j := 0; j < n[layer]; j++ {
+				sum += weights_a[layer][i][j] * weights_b[layer][i][j]
+			}
+		}
+	}
+
+	return sum
+}
+
+func CosineSimWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) float64 {
+	dot := 0
+	normA := 0
+	normB := 0
+
+	for layer := 0; layer < h; layer++ {
+		for i := 0; i < k[layer]; i++ {
+			for j := 0; j < n[layer]; j++ {
+				va := weights_a[layer][i][j]
+				vb := weights_b[layer][i][j]
+
+				dot += va * vb
+				normA += va * va
+				normB += vb * vb
+			}
+		}
+	}
+
+	if normA == 0 || normB == 0 {
+		return 0 // avoid division by zero
+	}
+
+	return float64(dot) / (math.Sqrt(float64(normA)) * math.Sqrt(float64(normB)))
 }
 
 func CreateRandomStimulusArray(k int, n int, m int) [][]int {

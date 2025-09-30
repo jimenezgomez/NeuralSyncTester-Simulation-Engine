@@ -1,10 +1,13 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
+	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/dbmanager"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine/attacks"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/session_manager"
@@ -12,68 +15,82 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var timeToLive = 1 * time.Minute
+const DEFAULT_TTL = 1 * time.Minute
+const SYNC_REPETITIONS = 100
 
+// Refactor into enums/config file (?)
+var AttackModes = []string{"NAIVE", "GEOMETRIC", "MAJORITY"}
+var sessionManager *session_manager.SessionManager
+var datamanager *dbmanager.DBManager[dbmanager.AttackSessionLog]
 var cliCmd = &cobra.Command{
 	Use:   "cli",
 	Short: "Run a simulation in CLI mode (no SSE)",
 	Run: func(cmd *cobra.Command, args []string) {
+		config_manager.InitEnv()
+		envConfig := config_manager.LoadDBEnv()
+		connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", //TODO: add SSL toggle in env
+			envConfig.User, envConfig.Pass, envConfig.Host, envConfig.Port, envConfig.Name)
+		db, err := sql.Open("postgres", connString)
+		if err != nil {
+			panic(err)
+		}
+		err = db.Ping()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Connected to Postgres!")
 
-		// settings_list, baseBatchSettings, err := config_manager.LoadBatchSettingsFromFile("./simulation_settings.json")
-		// if err != nil {
-		// 	fmt.Println(err)
-		// }
-		// fmt.Println(settings_list)
-		// fmt.Println(baseBatchSettings)
-		// return
-		// connString := "postgres://mtpm_user:mtpm_pass@localhost:5432/mtpm_db?sslmode=disable"
+		datamanager = dbmanager.NewDBManager(db, dbmanager.InsertAttackSessions, 500, 2*time.Second)
+		defer datamanager.Close(context.Background())
 
-		// db, err := sql.Open("postgres", connString)
-		// if err != nil {
-		// 	panic(err)
-		// }
+		sessionManager = session_manager.NewSessionManager(DEFAULT_TTL)
 
-		// err = db.Ping()
-		// if err != nil {
-		// 	panic(err)
-		// }
-
-		// fmt.Println("Connected to Postgres!")
-
-		// manager := dbmanager.NewDBManager(db, dbmanager.InsertSessions, 500, 2*time.Second)
-		// defer manager.Close(context.Background())
-		settings := engine.NewMTPMSettings([]int{3}, []int{3}, 3, 1, 1, "HEBBIAN", "PARTIAL_OVERLAP")
-		trackedState := engine.NewTrackedState(settings)
-		sessionManager := session_manager.NewSessionManager(timeToLive)
-		sessionManager.AddMTPM(trackedState.UID, trackedState)
-		ch := make(chan []byte, 10) // small buffer, prevent blocking
-		trackedState.Subscribe(ch)
-		defer trackedState.Unsubscribe(ch)
-
-		go func() {
-			for i := 0; i < 1_000_000; i++ {
-				result := attacks.RunTrackedAttack(trackedState, "MAJORITY")
-				if result.SessionStatus == "ATTACK_SUCCESS" {
-					fmt.Println("ATTACK SUCCESS - ", i)
-					fmt.Println(result)
-					panic("ERR")
-				}
-				// result := engine.SimulateTrackedSync(trackedState)
-				// sessionLog := dbmanager.NewLogFromResult(result)
-				// manager.Add(sessionLog)
-			}
-		}()
-
-		for msg := range ch {
-			var snapshot engine.SimulationInstance
-			if err := json.Unmarshal(msg, &snapshot); err != nil {
-				fmt.Println("failed to unmarshal snapshot:", err)
+		batchGroup, err := config_manager.ScanAndLoadBatchSettings("./config")
+		if err != nil {
+			fmt.Println(err)
+		}
+		for _, batchCollected := range batchGroup {
+			if batchCollected.Err != nil {
 				continue
 			}
 
-			fmt.Printf("%s\n", trackedState.StartTime.Format(time.ANSIC))
-			fmt.Printf("%s", snapshot.PrettyPrint())
+			fmt.Println(batchCollected.Path)
+			fmt.Println(len(batchCollected.SettingsList))
+			for _, mtpmSettings := range batchCollected.SettingsList {
+				RunInstance(mtpmSettings)
+			}
 		}
 
+		// trackedState.Subscribe(ch)
+		// defer trackedState.Unsubscribe(ch)
+		// for msg := range ch {
+		// 	var snapshot engine.SimulationInstance
+		// 	if err := json.Unmarshal(msg, &snapshot); err != nil {
+		// 		fmt.Println("failed to unmarshal snapshot:", err)
+		// 		continue
+		// 	}
+
+		// 	fmt.Printf("%s\n", trackedState.StartTime.Format(time.ANSIC))
+		// 	fmt.Printf("%s", snapshot.PrettyPrint())
+		// }
+
 	},
+}
+
+func RunInstance(settings engine.MTPMSettings) {
+	trackedState := engine.NewTrackedState(settings) //Move outside and maybe new type for attacks?
+	sessionManager.AddMTPM(trackedState.UID, trackedState)
+	defer sessionManager.DeleteMTPM(trackedState.UID)
+
+	for i := 0; i < SYNC_REPETITIONS; i++ {
+		for _, attack_type := range AttackModes {
+			result := attacks.RunTrackedAttack(trackedState, attack_type)
+			sessionLog, err := dbmanager.NewAttackSessionLog(result)
+			if err != nil {
+				panic("Fatal error when creating a new attack session log: " + err.Error())
+			}
+			datamanager.Add(sessionLog)
+		}
+	}
+
 }
