@@ -20,7 +20,7 @@ import (
 )
 
 const DEFAULT_TTL = 1 * time.Minute
-const SYNC_REPETITIONS = 20
+const SYNC_REPETITIONS = 100
 
 // Refactor into enums/config file (?)
 var AttackModes = []string{"NAIVE", "GEOMETRIC", "MAJORITY"}
@@ -77,12 +77,12 @@ var cliCmd = &cobra.Command{
 				simulationPool.Go(func() { RunInstance(mtpmSettings) })
 			}
 
-			logMsg = fmt.Sprintf("File %s has finished simulating %d configurations", batchCollected.Path, len(batchCollected.SettingsList))
-			err = pb.PushNote(devs[0].Iden, fmt.Sprintf("Config file %s finished", filepath.Base(batchCollected.Path)), logMsg)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(logMsg)
+			// logMsg = fmt.Sprintf("File %s has finished simulating %d configurations", batchCollected.Path, len(batchCollected.SettingsList))
+			// err = pb.PushNote(devs[0].Iden, fmt.Sprintf("Config file %s finished", filepath.Base(batchCollected.Path)), logMsg)
+			// if err != nil {
+			// 	panic(err)
+			// }
+			// fmt.Println(logMsg)
 		}
 
 		simulationPool.Wait()

@@ -6,4 +6,5 @@ db_bak/
 /src/*/simulation_settings*
 /src/testSizes/
 /config
+/config_*
 neural-sync-engine-launcher
