@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 )
 
-func InsertSessions(ctx context.Context, db *sql.DB, sessions []SyncSessionLog) error {
+func InsertSyncSessions(ctx context.Context, db *sql.DB, sessions []SyncSessionLog) error {
 	if len(sessions) == 0 {
 		return nil
 	}

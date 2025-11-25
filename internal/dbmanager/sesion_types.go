@@ -42,6 +42,15 @@ func NewLogFromResult(res engine.SimulationResult) (SyncSessionLog, error) {
 		return SyncSessionLog{}, err
 	}
 
+	initialState, err := json.Marshal(res.InitialState)
+	if err != nil {
+		return SyncSessionLog{}, err
+	}
+	finalState, err := json.Marshal(res.FinalState)
+	if err != nil {
+		return SyncSessionLog{}, err
+	}
+
 	return SyncSessionLog{
 		NetworkSize:         engine.GetDataSize(res.Settings),
 		FirstK:              firstOrZero(res.Settings.K),
@@ -59,8 +68,8 @@ func NewLogFromResult(res engine.SimulationResult) (SyncSessionLog, error) {
 		H:                   res.Settings.H,
 		LearnRule:           res.Settings.LearnRule,
 		Scenario:            res.Settings.Scenario,
-		InitialState:        res.InitialState,
-		FinalState:          res.FinalState,
+		InitialState:        initialState,
+		FinalState:          finalState,
 		SessionStatus:       res.SessionStatus,
 	}, err
 }
