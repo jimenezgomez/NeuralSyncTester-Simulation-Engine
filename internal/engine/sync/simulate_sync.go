@@ -1,19 +1,21 @@
-package engine
+package sync
 
 import (
 	"time"
 
+	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
 )
 
-func SimulateSimpleSync(settings MTPMSettings) SimulationInstance {
+func SimulateSimpleSync(settings engine.MTPMSettings) engine.SimulationInstance {
 	max_iterations := 100_000
 
-	simulationInstance := SimulationInstance{
-		SimulationState: SimulationState{
-			StateA: NewMTPMState(settings),
-			StateB: NewMTPMState(settings)},
-		SimulationProgress: SimulationProgress{
+	simulationInstance := engine.SimulationInstance{
+		SimulationState: engine.SimulationState{
+			StateA: engine.NewMTPMState(settings),
+			StateB: engine.NewMTPMState(settings)},
+		SimulationProgress: engine.SimulationProgress{
 			StimulateIterations: 0,
 			LearnIterations:     0,
 		},
@@ -39,21 +41,19 @@ func SimulateSimpleSync(settings MTPMSettings) SimulationInstance {
 			simulationInstance.LearnIterations += 1
 		}
 
-		syncReached = CompareWeights(settings, simulationInstance.StateA, simulationInstance.StateB)
+		syncReached = engine.CompareWeights(settings, simulationInstance.StateA, simulationInstance.StateB)
 	}
 	return simulationInstance
 }
 
-func SimulateTrackedSync(trackedState *TrackedMTPMSession) SimulationResult {
-	max_iterations := 1_000_000
-	skipIterations := 150
+func SimulateTrackedSync(trackedState *engine.TrackedMTPMSession, simConfig config_manager.SimulationConfig, trackConfig config_manager.TrackingConfig) engine.SimulationResult {
 	settings := trackedState.Settings
 
-	simulationInstance := SimulationInstance{
-		SimulationState: SimulationState{
-			StateA: NewMTPMState(settings),
-			StateB: NewMTPMState(settings)},
-		SimulationProgress: SimulationProgress{
+	simulationInstance := engine.SimulationInstance{
+		SimulationState: engine.SimulationState{
+			StateA: engine.NewMTPMState(settings),
+			StateB: engine.NewMTPMState(settings)},
+		SimulationProgress: engine.SimulationProgress{
 			StimulateIterations: 0,
 			LearnIterations:     0,
 		},
@@ -64,9 +64,9 @@ func SimulateTrackedSync(trackedState *TrackedMTPMSession) SimulationResult {
 	syncReached := tpm_core.CompareWeights(settings.H, settings.K, settings.N,
 		simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
 
-	skipCounter := skipIterations
+	skipCounter := trackConfig.SkipIterations
 	for !syncReached {
-		if simulationInstance.StimulateIterations > max_iterations {
+		if simulationInstance.StimulateIterations > simConfig.IterationLimit {
 			break
 		}
 
@@ -85,12 +85,12 @@ func SimulateTrackedSync(trackedState *TrackedMTPMSession) SimulationResult {
 			simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
 
 		//TRACKING
-		if trackedState.subCount.Load() > 0 {
+		if trackedState.GetSubCount() > 0 {
 			// Only bother tracking/publishing if someone is listening
 			if skipCounter == 0 {
 				snapshot := simulationInstance.DeepCopy()
 				trackedState.UpdateSnapshot(snapshot)
-				skipCounter = skipIterations
+				skipCounter = trackConfig.SkipIterations
 			}
 			skipCounter--
 		}
@@ -102,7 +102,7 @@ func SimulateTrackedSync(trackedState *TrackedMTPMSession) SimulationResult {
 		status = "ON_SYNC"
 	}
 
-	result := SimulationResult{
+	result := engine.SimulationResult{
 		Settings:      settings,
 		InitialState:  startInstance.SimulationState,
 		FinalState:    simulationInstance.SimulationState,

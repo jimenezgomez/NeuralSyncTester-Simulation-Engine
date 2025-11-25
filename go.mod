@@ -2,9 +2,13 @@ module github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine
 
 go 1.24.6
 
-require github.com/spf13/cobra v1.10.1
+require (
+	github.com/spf13/cobra v1.10.1
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
+	github.com/kr/text v0.2.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 )

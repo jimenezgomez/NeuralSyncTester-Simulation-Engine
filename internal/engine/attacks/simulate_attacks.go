@@ -5,21 +5,17 @@ import (
 	"strings"
 	"time"
 
+	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
 )
 
-const ITERATION_LIMIT = 100_000
-const TRACKING_SKIP_ITERATIONS = 150 //Skip n iterations before sending a new attackerState
-const DEFAULT_ATT_LIMIT = 100        //We will use this many attackers. (All implemented attacks use up to the limit - other attacks may use this as a limit and dynamically spawn new attackers)
-const STORE_TOP_ATT_LIMIT = 10       //only save the best 10 attackers
-
-func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string) AttackResult {
+func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string, simConfig config_manager.SimulationConfig, trackConfig config_manager.TrackingConfig) AttackResult {
 	settings := trackedState.GetSettings()
 
 	attackSettings := AttackSettings{
 		MTPMSettings:  settings,
-		AttackerLimit: DEFAULT_ATT_LIMIT,
+		AttackerLimit: simConfig.DefaultAttackerLimit,
 		AttackType:    attackType,
 	}
 
@@ -45,9 +41,9 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string
 		simulationInstance.StateA.Weights, simulationInstance.StateB.Weights)
 
 	checkResult := 0
-	skipCounter := TRACKING_SKIP_ITERATIONS
+	skipCounter := trackConfig.SkipIterations
 	for !syncReached {
-		if simulationInstance.StimulateIterations > ITERATION_LIMIT {
+		if simulationInstance.StimulateIterations > simConfig.IterationLimit {
 			break
 		}
 
@@ -79,7 +75,7 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string
 			if skipCounter == 0 {
 				snapshot := simulationInstance.DeepCopy()
 				trackedState.UpdateSnapshot(snapshot)
-				skipCounter = TRACKING_SKIP_ITERATIONS
+				skipCounter = trackConfig.SkipIterations
 			}
 			skipCounter--
 		}
@@ -97,8 +93,8 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string
 	//Get the best attackers, they will be saved in the db
 	SetAttackerWeightScores(attackSettings, *attackInstance)
 	topAttackers := GetTopAttackersByWeight(*attackInstance)
-	topScores := make([]float64, STORE_TOP_ATT_LIMIT)
-	for i := range STORE_TOP_ATT_LIMIT {
+	topScores := make([]float64, simConfig.StoreTopAttackerLimit)
+	for i := range simConfig.StoreTopAttackerLimit {
 		topScores[i] = topAttackers[i].weightScore
 	}
 

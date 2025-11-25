@@ -1,6 +1,7 @@
 package dbmanager
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
@@ -28,7 +29,19 @@ type SyncSessionLog struct {
 	SessionStatus       string
 }
 
-func NewLogFromResult(res engine.SimulationResult) SyncSessionLog {
+func NewLogFromResult(res engine.SimulationResult) (SyncSessionLog, error) {
+	// marshal K and N (safe for JSONB)
+	mtpmSettings := res.Settings
+
+	kBytes, err := json.Marshal(mtpmSettings.K)
+	if err != nil {
+		return SyncSessionLog{}, err
+	}
+	nBytes, err := json.Marshal(mtpmSettings.N)
+	if err != nil {
+		return SyncSessionLog{}, err
+	}
+
 	return SyncSessionLog{
 		NetworkSize:         engine.GetDataSize(res.Settings),
 		FirstK:              firstOrZero(res.Settings.K),
@@ -39,8 +52,8 @@ func NewLogFromResult(res engine.SimulationResult) SyncSessionLog {
 		EndTime:             res.EndTime,
 		StimulateIterations: res.Iterations.StimulateIterations,
 		LearnIterations:     res.Iterations.LearnIterations,
-		K:                   res.Settings.K, // full object goes to JSONB
-		N:                   res.Settings.N,
+		K:                   kBytes,
+		N:                   nBytes,
 		L:                   res.Settings.L,
 		M:                   res.Settings.M,
 		H:                   res.Settings.H,
@@ -49,7 +62,7 @@ func NewLogFromResult(res engine.SimulationResult) SyncSessionLog {
 		InitialState:        res.InitialState,
 		FinalState:          res.FinalState,
 		SessionStatus:       res.SessionStatus,
-	}
+	}, err
 }
 
 // helpers for extracting first/last from slices

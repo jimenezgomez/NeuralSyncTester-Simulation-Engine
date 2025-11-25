@@ -1,68 +1,24 @@
-package main
+package cmd
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"log"
-	"path/filepath"
-	"time"
 
 	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/dbmanager"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine/attacks"
-	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/session_manager"
 	_ "github.com/lib/pq"
-	"github.com/sourcegraph/conc/pool"
 	"github.com/spf13/cobra"
-	"github.com/xconstruct/go-pushbullet"
 )
 
-const DEFAULT_TTL = 1 * time.Minute
-const SYNC_REPETITIONS = 100
-
-// Refactor into enums/config file (?)
-var AttackModes = []string{"NAIVE", "GEOMETRIC", "MAJORITY"}
-var sessionManager *session_manager.SessionManager
-var datamanager *dbmanager.DBManager[dbmanager.AttackSessionLog]
 var cliCmd = &cobra.Command{
 	Use:   "cli",
 	Short: "Run a simulation in CLI mode (no SSE)",
 	Run: func(cmd *cobra.Command, args []string) {
-		//Load configuration and set-up the simulation
-		config_manager.InitEnv()
-		maxSimulations := config_manager.GetMaxSimulations()
-		simulationPool := pool.New().WithMaxGoroutines(maxSimulations)
-		envConfig := config_manager.LoadDBEnv()
-		//Connect to postgres
-		connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", //TODO: add SSL toggle in env
-			envConfig.User, envConfig.Pass, envConfig.Host, envConfig.Port, envConfig.Name)
-		db, err := sql.Open("postgres", connString)
-		if err != nil {
-			panic(err)
-		}
-		err = db.Ping()
-		if err != nil {
-			panic(err)
-		}
-		log.Println("Connected to Postgres!")
 
-		//Setup dbmanager to insert data every 2 seconds
-		datamanager = dbmanager.NewDBManager(db, dbmanager.InsertAttackSessions, 500, 2*time.Second)
-		defer datamanager.Close(context.Background())
-
-		//Set-up PushBullet
-		pbApiKey := config_manager.LoadPBApiKey()
-		pb := pushbullet.New(pbApiKey)
-		devs, err := pb.Devices()
-		if err != nil {
-			panic(err)
-		}
-
-		//Create sim session manager
-		sessionManager = session_manager.NewSessionManager(DEFAULT_TTL)
-		batchGroup, err := config_manager.ScanAndLoadBatchSettings("./config")
+		fmt.Println("Using config directory: ", GlobalSimulationConfig.BatchPath)
+		batchGroup, err := config_manager.ScanAndLoadBatchSettings(GlobalSimulationConfig.BatchPath)
 		if err != nil {
 			log.Fatalf("Error occurred: %v", err)
 		}
@@ -72,7 +28,7 @@ var cliCmd = &cobra.Command{
 			}
 
 			logMsg := fmt.Sprintf("File Path: %s \nConfigurations loaded: %d\n", batchCollected.Path, len(batchCollected.SettingsList))
-			err = pb.PushNote(devs[0].Iden, fmt.Sprintf("Starting simulations for config file %s", filepath.Base(batchCollected.Path)), logMsg)
+			// err = pb.PushNote(devs[0].Iden, fmt.Sprintf("Starting simulations for config file %s", filepath.Base(batchCollected.Path)), logMsg)
 			if err != nil {
 				panic(err)
 			}
@@ -83,7 +39,7 @@ var cliCmd = &cobra.Command{
 		}
 
 		simulationPool.Wait()
-		err = pb.PushNote(devs[0].Iden, "All config files have finished", "All files have finished simulating attacks.")
+		// err = pb.PushNote(devs[0].Iden, "All config files have finished", "All files have finished simulating attacks.")
 		if err != nil {
 			panic(err)
 		}
@@ -109,13 +65,13 @@ var cliCmd = &cobra.Command{
 }
 
 func RunInstance(settings engine.MTPMSettings) {
-	trackedState := engine.NewTrackedSession(settings, SYNC_REPETITIONS) //Move outside and maybe new type for attacks?
+	trackedState := engine.NewTrackedSession(settings, GlobalSimulationConfig.SyncRepetitions) //Move outside and maybe new type for attacks?
 	sessionManager.AddMTPM(trackedState.UID, trackedState)
 	defer sessionManager.DeleteMTPM(trackedState.UID)
 
-	for _, attack_type := range AttackModes {
-		for i := 0; i < SYNC_REPETITIONS; i++ {
-			result := attacks.RunTrackedAttack(trackedState, attack_type)
+	for _, attack_type := range GlobalSimulationConfig.AttackModes {
+		for i := 0; i < GlobalSimulationConfig.SyncRepetitions; i++ {
+			result := attacks.RunTrackedAttack(trackedState, attack_type, GlobalSimulationConfig, GlobalTrackingConfig)
 			sessionLog, err := dbmanager.NewAttackSessionLog(result)
 			if err != nil {
 				panic("Fatal error when creating a new attack session log: " + err.Error())
