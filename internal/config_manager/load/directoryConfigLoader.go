@@ -9,7 +9,7 @@ import (
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 )
 
-// Wrapper result so you can handle multiple files
+// Wrapper result allows multiple files
 type BatchSettingsResult struct {
 	Path              string
 	SettingsList      []engine.MTPMSettings

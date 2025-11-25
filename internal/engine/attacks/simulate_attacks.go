@@ -11,10 +11,10 @@ import (
 
 const ITERATION_LIMIT = 100_000
 const TRACKING_SKIP_ITERATIONS = 150 //Skip n iterations before sending a new attackerState
-const DEFAULT_ATT_LIMIT = 100        //We will use this many attackers. (All implemented attacks use up to the limit)
+const DEFAULT_ATT_LIMIT = 100        //We will use this many attackers. (All implemented attacks use up to the limit - other attacks may use this as a limit and dynamically spawn new attackers)
 const STORE_TOP_ATT_LIMIT = 10       //only save the best 10 attackers
 
-func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) AttackResult {
+func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string) AttackResult {
 	settings := trackedState.GetSettings()
 
 	attackSettings := AttackSettings{
@@ -38,7 +38,7 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) 
 		panic("The requested attack type was not found. - " + attackSettings.AttackType)
 	}
 
-	startInstance := simulationInstance.DeepCopy()
+	startInstance := simulationInstance.DeepCopy() //We store a copy of the initial state to store it later in the database
 	trackedState.UpdateSnapshot(startInstance)
 	trackedState.StartTime = time.Now()
 	syncReached := tpm_core.CompareWeights(settings.H, settings.K, settings.N,
@@ -56,15 +56,17 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) 
 		simulationInstance.StateB.Stimulate(settings, input_stimulus)
 		// StimulateAllAttackers(attackSettings, attackInstance, input_stimulus)
 		// Here we should stimulate the attackers, but we don't really need to unless we need to update their weights
+		// If no learning is done, the behaviour of the TPMs should not change! (they keep their weights w/o change)
+		// We stimulate all attackers on attackerExec, before actually performing the attack
 		simulationInstance.StimulateIterations += 1
 
 		if simulationInstance.StateA.NetworkOutput == simulationInstance.StateB.NetworkOutput {
-			simulationInstance.StateA.Learn(settings, simulationInstance.StateB.NetworkOutput)
-			simulationInstance.StateB.Learn(settings, simulationInstance.StateA.NetworkOutput)
 			attackInstance.attackerExec(
 				&attackSettings, attackInstance,
 				attackInstance.StateA.NetworkOutput, attackInstance.StateB.NetworkOutput,
 				input_stimulus)
+			simulationInstance.StateA.Learn(settings, simulationInstance.StateB.NetworkOutput)
+			simulationInstance.StateB.Learn(settings, simulationInstance.StateA.NetworkOutput)
 			simulationInstance.LearnIterations += 1
 		}
 
@@ -92,6 +94,7 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMState, attackType string) 
 		status = "ATTACK_SUCCESS"
 	}
 
+	//Get the best attackers, they will be saved in the db
 	SetAttackerWeightScores(attackSettings, *attackInstance)
 	topAttackers := GetTopAttackersByWeight(*attackInstance)
 	topScores := make([]float64, STORE_TOP_ATT_LIMIT)
@@ -146,7 +149,7 @@ func CreateAttackInstance(simulationInstance engine.SimulationInstance, attackSe
 		attackInstance := NewGeomAttack(attackSettings, simulationInstance)
 		return &attackInstance
 	case "MAJORITY", "MAJORITY-FLIPPING", "MAJORITY FLIPPING":
-		attackInstance := NewGeomAttack(attackSettings, simulationInstance)
+		attackInstance := NewMajorityAttack(attackSettings, simulationInstance)
 		return &attackInstance
 	}
 	return nil

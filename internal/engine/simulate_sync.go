@@ -44,10 +44,10 @@ func SimulateSimpleSync(settings MTPMSettings) SimulationInstance {
 	return simulationInstance
 }
 
-func SimulateTrackedSync(trackedState *TrackedMTPMState) SimulationResult {
+func SimulateTrackedSync(trackedState *TrackedMTPMSession) SimulationResult {
 	max_iterations := 1_000_000
 	skipIterations := 150
-	settings := trackedState.settings
+	settings := trackedState.Settings
 
 	simulationInstance := SimulationInstance{
 		SimulationState: SimulationState{

@@ -20,9 +20,12 @@ func (mtpmState *MTPMState) Stimulate(settings MTPMSettings, firstLayerInput [][
 			outputs[layer],
 			settings.K[layer+1], settings.N[layer+1])
 	}
+	//Stimulate the last layer
 	outputs[settings.H-1] = tpm_core.StimulateLayer(
 		inputs[settings.H-1], mtpmState.Weights[settings.H-1],
 		settings.K[settings.H-1], settings.N[settings.H-1])
+
+	//Calculate the final network output
 	mtpmState.NetworkOutput = tpm_core.Thau(outputs[settings.H-1], settings.K[settings.H-1])
 }
 

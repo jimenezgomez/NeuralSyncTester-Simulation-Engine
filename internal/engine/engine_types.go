@@ -218,26 +218,29 @@ type SimulationResult struct {
 	EndTime       time.Time
 }
 
-type TrackedMTPMState struct {
-	UID       string
-	StartTime time.Time
-	settings  MTPMSettings
-	snapshot  atomic.Value // stores []byte (marshaled snapshot)
-	subs      map[chan []byte]struct{}
-	subCount  atomic.Int64
-	subsLock  sync.RWMutex
+type TrackedMTPMSession struct {
+	UID         string
+	StartTime   time.Time
+	Settings    MTPMSettings
+	MaxSimCount int
+	snapshot    atomic.Value // stores []byte (marshaled snapshot)
+	subs        map[chan []byte]struct{}
+	subCount    atomic.Int64
+	subsLock    sync.RWMutex
+	simProgress atomic.Int64
 }
 
-func NewTrackedState(settings MTPMSettings) *TrackedMTPMState {
-	ts := &TrackedMTPMState{
-		UID:      "0",
-		settings: settings,
-		subs:     make(map[chan []byte]struct{}),
+func NewTrackedSession(settings MTPMSettings, maxSimCount int) *TrackedMTPMSession {
+	ts := &TrackedMTPMSession{
+		UID:         "0",
+		Settings:    settings,
+		MaxSimCount: maxSimCount,
+		subs:        make(map[chan []byte]struct{}),
 	}
 	return ts
 }
 
-func (ts *TrackedMTPMState) Subscribe(ch chan []byte) {
+func (ts *TrackedMTPMSession) Subscribe(ch chan []byte) {
 
 	ts.subsLock.Lock()
 	ts.subs[ch] = struct{}{}
@@ -246,7 +249,7 @@ func (ts *TrackedMTPMState) Subscribe(ch chan []byte) {
 	ts.subCount.Add(1)
 }
 
-func (ts *TrackedMTPMState) Unsubscribe(ch chan []byte) {
+func (ts *TrackedMTPMSession) Unsubscribe(ch chan []byte) {
 	ts.subsLock.Lock()
 	delete(ts.subs, ch)
 	ts.subsLock.Unlock()
@@ -254,11 +257,11 @@ func (ts *TrackedMTPMState) Unsubscribe(ch chan []byte) {
 	ts.subCount.Add(-1)
 }
 
-func (ts *TrackedMTPMState) UpdateSnapshot(newSnap *SimulationInstance) {
+func (ts *TrackedMTPMSession) UpdateSnapshot(newSnap *SimulationInstance) {
 	ts.snapshot.Store(newSnap)
 }
 
-func (ts *TrackedMTPMState) GetSnapshot() *SimulationInstance {
+func (ts *TrackedMTPMSession) GetSnapshot() *SimulationInstance {
 	v := ts.snapshot.Load()
 	if v == nil {
 		return nil
@@ -267,7 +270,7 @@ func (ts *TrackedMTPMState) GetSnapshot() *SimulationInstance {
 	return v.(*SimulationInstance)
 }
 
-func (ts *TrackedMTPMState) GetSnapshotRaw() []byte {
+func (ts *TrackedMTPMSession) GetSnapshotRaw() []byte {
 	snap := ts.GetSnapshot()
 	if snap == nil {
 		return nil
@@ -276,7 +279,7 @@ func (ts *TrackedMTPMState) GetSnapshotRaw() []byte {
 	return data
 }
 
-func (ts *TrackedMTPMState) UpdateAllSubscribers() {
+func (ts *TrackedMTPMSession) UpdateAllSubscribers() {
 	ts.subsLock.RLock()
 	defer ts.subsLock.RUnlock()
 
@@ -289,10 +292,18 @@ func (ts *TrackedMTPMState) UpdateAllSubscribers() {
 	}
 }
 
-func (ts *TrackedMTPMState) GetSubCount() int64 {
+func (ts *TrackedMTPMSession) GetSubCount() int64 {
 	return ts.subCount.Load()
 }
 
-func (ts *TrackedMTPMState) GetSettings() MTPMSettings {
-	return ts.settings
+func (ts *TrackedMTPMSession) GetSettings() MTPMSettings {
+	return ts.Settings
+}
+
+func (ts *TrackedMTPMSession) GetSessionProgress() int64 {
+	return ts.simProgress.Load()
+}
+
+func (ts *TrackedMTPMSession) AddProgress() int64 {
+	return ts.simProgress.Add(1)
 }

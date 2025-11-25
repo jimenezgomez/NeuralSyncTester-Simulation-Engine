@@ -30,11 +30,12 @@ var cliCmd = &cobra.Command{
 	Use:   "cli",
 	Short: "Run a simulation in CLI mode (no SSE)",
 	Run: func(cmd *cobra.Command, args []string) {
+		//Load configuration and set-up the simulation
 		config_manager.InitEnv()
 		maxSimulations := config_manager.GetMaxSimulations()
-		// simulationPool := pool.New().WithMaxGoroutines(maxSimulations).WithErrors().WithFirstError()
 		simulationPool := pool.New().WithMaxGoroutines(maxSimulations)
 		envConfig := config_manager.LoadDBEnv()
+		//Connect to postgres
 		connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", //TODO: add SSL toggle in env
 			envConfig.User, envConfig.Pass, envConfig.Host, envConfig.Port, envConfig.Name)
 		db, err := sql.Open("postgres", connString)
@@ -47,9 +48,11 @@ var cliCmd = &cobra.Command{
 		}
 		log.Println("Connected to Postgres!")
 
+		//Setup dbmanager to insert data every 2 seconds
 		datamanager = dbmanager.NewDBManager(db, dbmanager.InsertAttackSessions, 500, 2*time.Second)
 		defer datamanager.Close(context.Background())
 
+		//Set-up PushBullet
 		pbApiKey := config_manager.LoadPBApiKey()
 		pb := pushbullet.New(pbApiKey)
 		devs, err := pb.Devices()
@@ -57,6 +60,7 @@ var cliCmd = &cobra.Command{
 			panic(err)
 		}
 
+		//Create sim session manager
 		sessionManager = session_manager.NewSessionManager(DEFAULT_TTL)
 		batchGroup, err := config_manager.ScanAndLoadBatchSettings("./config")
 		if err != nil {
@@ -76,13 +80,6 @@ var cliCmd = &cobra.Command{
 			for _, mtpmSettings := range batchCollected.SettingsList {
 				simulationPool.Go(func() { RunInstance(mtpmSettings) })
 			}
-
-			// logMsg = fmt.Sprintf("File %s has finished simulating %d configurations", batchCollected.Path, len(batchCollected.SettingsList))
-			// err = pb.PushNote(devs[0].Iden, fmt.Sprintf("Config file %s finished", filepath.Base(batchCollected.Path)), logMsg)
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// fmt.Println(logMsg)
 		}
 
 		simulationPool.Wait()
@@ -112,7 +109,7 @@ var cliCmd = &cobra.Command{
 }
 
 func RunInstance(settings engine.MTPMSettings) {
-	trackedState := engine.NewTrackedState(settings) //Move outside and maybe new type for attacks?
+	trackedState := engine.NewTrackedSession(settings, SYNC_REPETITIONS) //Move outside and maybe new type for attacks?
 	sessionManager.AddMTPM(trackedState.UID, trackedState)
 	defer sessionManager.DeleteMTPM(trackedState.UID)
 

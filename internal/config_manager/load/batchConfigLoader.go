@@ -10,6 +10,8 @@ import (
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 )
 
+// LoadBatchSettingsFromFile creates a list of settings from a filename
+// Returns: A list of MTPMSettings, The base settings (shared by all elements on the list
 func LoadBatchSettingsFromFile(filename string) ([]engine.MTPMSettings, *config_manager.BaseBatchSettings, error) {
 	// read file
 	data, err := os.ReadFile(filename)
@@ -42,6 +44,7 @@ func LoadBatchSettingsFromFile(filename string) ([]engine.MTPMSettings, *config_
 	}
 }
 
+// ListBatchSettings uses the loader provided by LoadBatchSettings to unwrap the settings, depending if its Overlapped or non Overlapped
 func ListBatchSettings(loader config_manager.BatchSettingsLoader) []engine.MTPMSettings {
 	configList := make([]engine.MTPMSettings, 0)
 	baseSettings := loader.GetBase()

@@ -23,9 +23,9 @@ func NewSimpleAttack(attackSettings AttackSettings, simulationInstance engine.Si
 }
 
 func ExecSimpleAttack(settings *AttackSettings, sessionState *AttackInstance, output_A, output_B int, input_stimulus [][]int) {
-	for _, v := range sessionState.attackerStates {
-		v.Stimulate(settings.MTPMSettings, input_stimulus)
-		v.LearnWithOutputs(settings.MTPMSettings, output_A, output_B)
+	for _, attacker := range sessionState.attackerStates {
+		attacker.Stimulate(settings.MTPMSettings, input_stimulus)
+		attacker.LearnWithOutputs(settings.MTPMSettings, output_A, output_B)
 	}
 }
 

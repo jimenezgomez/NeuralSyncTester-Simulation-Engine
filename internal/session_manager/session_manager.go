@@ -18,7 +18,7 @@ type SSESession struct {
 // SessionManager manages active sessions.
 type SessionManager struct {
 	sessionsSSE  map[string]SSESession
-	sessionsMTPM map[string]*engine.TrackedMTPMState
+	sessionsMTPM map[string]*engine.TrackedMTPMSession
 	mu           sync.RWMutex
 	ttl          time.Duration
 }
@@ -27,7 +27,7 @@ type SessionManager struct {
 func NewSessionManager(ttl time.Duration) *SessionManager {
 	sm := &SessionManager{
 		sessionsSSE:  make(map[string]SSESession),
-		sessionsMTPM: make(map[string]*engine.TrackedMTPMState),
+		sessionsMTPM: make(map[string]*engine.TrackedMTPMSession),
 		ttl:          ttl,
 	}
 	// start background cleanup loop
@@ -65,14 +65,14 @@ func (sm *SessionManager) DeleteSSE(token string) {
 }
 
 // AddSSE adds or updates a session.
-func (sm *SessionManager) AddMTPM(token string, s *engine.TrackedMTPMState) {
+func (sm *SessionManager) AddMTPM(token string, s *engine.TrackedMTPMSession) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	sm.sessionsMTPM[token] = s
 }
 
 // GetSSE retrieves a session by token, if valid.
-func (sm *SessionManager) GetMTPM(token string) (*engine.TrackedMTPMState, bool) {
+func (sm *SessionManager) GetMTPM(token string) (*engine.TrackedMTPMSession, bool) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 	s, ok := sm.sessionsMTPM[token]
@@ -82,6 +82,29 @@ func (sm *SessionManager) GetMTPM(token string) (*engine.TrackedMTPMState, bool)
 	return s, true
 }
 
+func (sm *SessionManager) GetAllMTPMSessions() map[string]*engine.TrackedMTPMSession {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+
+	// Make a shallow copy to avoid concurrent map access issues
+	copyMap := make(map[string]*engine.TrackedMTPMSession, len(sm.sessionsMTPM))
+	for k, v := range sm.sessionsMTPM {
+		copyMap[k] = v
+	}
+
+	return copyMap
+}
+
+func (sm *SessionManager) GetAllMTPMProgress() map[string]int64 {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	copyMap := make(map[string]int64, len(sm.sessionsMTPM))
+	for k, v := range sm.sessionsMTPM {
+		copyMap[k] = v.GetSessionProgress()
+	}
+	return copyMap
+}
+
 // DeleteSSE removes a session manually.
 func (sm *SessionManager) DeleteMTPM(token string) {
 	sm.mu.Lock()
@@ -89,7 +112,7 @@ func (sm *SessionManager) DeleteMTPM(token string) {
 	delete(sm.sessionsMTPM, token)
 }
 
-// updateLoop runs every 10 seconds to remove expired sessions.
+// updateLoop runs every 10 seconds to remove expired sessions and update the on-going simulations.
 func (sm *SessionManager) updateLoop() {
 	tickerSubs := time.NewTicker(1 * time.Second)
 	defer tickerSubs.Stop()
