@@ -7,4 +7,5 @@ db_bak/
 /src/testSizes/
 /config
 /config_*
+/pgdata
 neural-sync-engine-launcher
