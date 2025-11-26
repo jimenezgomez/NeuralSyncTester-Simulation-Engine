@@ -1,0 +1,25 @@
+batch_path: "config/batches"
+
+# Maximum number of iterations allowed for a simulation run
+iteration_limit: 100000
+
+# Number of synchronization repetitions to perform
+sync_repetitions: 100
+
+
+##-----------------ATTACKS---------------##
+# If not using attack mode, the settings below have no effect
+##########
+
+# Maximum number of attackers to spawn
+default_attacker_limit: 100
+
+# Number of top-performing attackers to store or track
+store_top_attacker_limit: 10
+
+
+# List of enabled attack modes for the simulation engine
+attack_modes:
+  - SIMPLE
+  - GEOMETRIC
+  - MAJORITY

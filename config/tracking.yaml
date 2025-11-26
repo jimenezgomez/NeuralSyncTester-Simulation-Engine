@@ -1,0 +1,6 @@
+# Time-to-live for tracking sessions
+# Uses Go-style duration strings (e.g., "1m", "30s", "500ms")
+sse_ttl: "1m"
+
+# Number of iterations to skip before sending a new attacker state
+skip_iterations: 150
