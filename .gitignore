@@ -5,3 +5,7 @@ db_bak/
 /src/*/configFiles*
 /src/*/simulation_settings*
 /src/testSizes/
+/config
+/config_*
+/pgdata
+neural-sync-engine-launcher

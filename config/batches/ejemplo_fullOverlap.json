@@ -1,0 +1,35 @@
+{
+  "scenario": "full_overlap",
+  "max_session_count": 10,
+  "max_iterations": 100000,
+  "max_worker_count": 12,
+  "m_configs": [
+    1
+  ],
+  "l_configs": [
+    3
+  ],
+  "learn_rules": [
+    "Hebbian"
+  ],
+  "n0_configs": [
+    2
+  ],
+  "k_configs": [
+    [
+      6,
+      3
+    ],
+    [
+      12,
+      6,
+      3
+    ],
+    [
+      24,
+      12,
+      6,
+      3
+    ]
+  ]
+}
