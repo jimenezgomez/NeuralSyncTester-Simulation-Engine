@@ -77,10 +77,19 @@ $$N_{h} = K_{h-1} - K_{h} + 1$$
 
 With $N_h$ the amount of stimulus of each neuron on the layer $h$, $K_h$ the amount of neurons of the layer $h$ and $K_{h-1}$ the amount of neurons in the previous layer.
 
-This means that, for partial overlap scenarios, the amount of neurons in a hidden layer must always be less than the previous layer.
+This means that, for partial overlap scenarios, **the amount of neurons in a hidden layer must always be less than the previous layer**.
 
 ### Parsing the MTPM architecures
 The batch configuration loader logic is in the file `internal/config_manager/load/batchConfigLoader.go`.
 
 The function `LoadBatchSettingsFromFile(filename string)` takes the filename as a parameter and returns a list of ALL the possible combinations. It will first parse the architectures of the file: the amount of neurons in each layer (`K`) and the amount of inputs that each neuron needs in each layer (`N`). 
 Then it will create all possible combinations for the common parameters (`L`,`M`,and the `Learning Rules`).
+
+### Parameters with no effect on the simulation
+The following parameters have no effect, as they have been moved to the other config files:
+
+- "max_session_count": moved to `simulation.yaml` -> sync_repetitions
+- "max_iterations": moved to `simulation.yaml` -> iteration_limit
+- "max_worker_count": moved to `.env` -> MAX_SIMULATIONS
+
+_NOTE: MAX_SIMULATIONS means max **concurrent** simulations, the name may be a bit misleading_
