@@ -39,9 +39,11 @@ var attackCmd = &cobra.Command{
 		}
 
 		simulationPool.Wait()
-		// err = pb.PushNote(devs[0].Iden, "All config files have finished", "All files have finished simulating attacks.")
-		if err != nil {
-			panic(err)
+		if pbClient != nil {
+			err = pbClient.PushNote(pbDevices[0].Iden, "All config files have finished", "All files have finished simulating attacks.")
+			if err != nil {
+				log.Print("Error on PB push:", err)
+			}
 		}
 		fmt.Println("All configuration files finished.")
 		// if err := simulationPool.Wait(); err != nil {

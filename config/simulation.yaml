@@ -1,10 +1,10 @@
-batch_path: "config/batches"
+batch_path: "config/exp_single"
 
 # Maximum number of iterations allowed for a simulation run
 iteration_limit: 100000
 
 # Number of synchronization repetitions to perform
-sync_repetitions: 100
+sync_repetitions: 1000
 
 
 ##-----------------ATTACKS---------------##

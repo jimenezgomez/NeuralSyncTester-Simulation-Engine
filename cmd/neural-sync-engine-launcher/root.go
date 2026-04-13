@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
@@ -63,12 +64,17 @@ var rootCmd = &cobra.Command{
 		//Note: the database is closed on PersistentPostRunE
 
 		//Set-up PushBullet
-		// pbApiKey := config_manager.LoadPBApiKey()
-		// pbClient = pushbullet.New(pbApiKey)
-		// _, err = pbClient.Devices()
-		// if err != nil {
-		// 	return err
-		// }
+		pbApiKey := config_manager.LoadPBApiKey()
+
+		if strings.TrimSpace(pbApiKey) == "" {
+			pbClient = nil
+		} else {
+			pbClient = pushbullet.New(pbApiKey)
+			pbDevices, err = pbClient.Devices()
+			if err != nil {
+				pbClient = nil
+			}
+		}
 
 		//Create sim session manager
 		sessionManager = session_manager.NewSessionManager(GlobalTrackingConfig.ParsedTTL)
@@ -89,6 +95,7 @@ var (
 	attDataManager         *dbmanager.DBManager[dbmanager.AttackSessionLog]
 	syncDataManager        *dbmanager.DBManager[dbmanager.SyncSessionLog]
 	pbClient               *pushbullet.Client
+	pbDevices              []*pushbullet.Device
 )
 
 func Execute() {
@@ -101,4 +108,5 @@ func init() {
 	rootCmd.AddCommand(attackCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(serverCmd)
+	rootCmd.AddCommand(sizeSolverCmd)
 }

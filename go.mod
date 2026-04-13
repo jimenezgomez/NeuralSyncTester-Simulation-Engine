@@ -21,3 +21,5 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/xconstruct/go-pushbullet v0.0.0-20171206132031-67759df45fbb
 )
+
+ignore ./pgdata

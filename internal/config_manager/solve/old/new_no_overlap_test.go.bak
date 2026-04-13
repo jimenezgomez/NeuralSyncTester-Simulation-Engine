@@ -1,0 +1,13 @@
+package main
+
+// func getMinSize(layerK, layerN, H int) int {
+// 	totalWeights := 0
+// 	for i := 0; i < H; i++ {
+// 		layerWeightCount := layerK * 2 //We can have at least two inputs per neuron
+// 		totalWeights += layerWeightCount
+
+// 		//Set for next iteration
+// 		layerK = layerWeightCount //In no overlap, each input is the output of another neuron
+// 	}
+// 	return totalWeights
+// }

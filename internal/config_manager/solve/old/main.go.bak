@@ -1,0 +1,280 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"tpm_sync/tpm_controllers"
+)
+
+const minStimCount = 2
+
+// const maxStimCount = 9
+const maxStimCount = 1024
+const maxLayerCount = 4
+
+const minNeuronsPerLayer = 3
+const maxNeuronsPerLayer = 16
+const default_L = 3
+const default_M = 1
+
+func getMinNetConfig(minSize, k_H, H int) {
+	lastSize := 0
+	n_H := minStimCount - 1 // we subtract by 1 to accomodate for the while loop
+	for lastSize < minSize {
+		n_H++
+		lastSize = getMinSize(k_H, n_H, H)
+	}
+	fmt.Printf("Min config found: K_H %d | N_H %d | H %d | size: %d", k_H, n_H, H, lastSize)
+}
+
+func main() {
+	networkSizes := []int{512, 768, 1024, 2048}
+	k_h_list := []int{2, 3, 4}
+
+	H_list := []int{1}
+	syncController := tpm_controllers.SyncController{}
+	for _, expectedSize := range networkSizes {
+		quantizedSize := expectedSize / 8 //convert from bits to bytes
+		for _, k_h := range k_h_list {
+			var output_combinations [][]int
+			for _, H := range H_list {
+				combinations := getNCombinations(k_h, H, quantizedSize)
+				output_combinations = append(output_combinations, combinations...)
+			}
+			if len(output_combinations) != 0 {
+				var output_configs_noOverlap []tpm_controllers.TPMmSettings
+				var output_configs_partialOverlap = make(map[int][]tpm_controllers.TPMmSettings)
+				var output_configs_fullOverlap = make(map[int][]tpm_controllers.TPMmSettings)
+				for _, N := range output_combinations {
+					configNoOverlap, err := syncController.SettingsFactory(N, k_h, default_L, default_M, "no_overlap", "Hebbian")
+					if err != nil {
+						fmt.Print(err)
+						continue
+					}
+					//Translate to overlapped configs
+					K := configNoOverlap.K
+					n_0 := configNoOverlap.N[0]
+					configPartialOverlap, err := syncController.SettingsFactory(K, n_0, default_L, default_M, "partial_overlap", "Hebbian")
+					if err != nil {
+						fmt.Print(err)
+						continue
+					}
+					configFullOverlap, err := syncController.SettingsFactory(K, n_0, default_L, default_M, "full_overlap", "Hebbian")
+					if err != nil {
+						fmt.Print(err)
+						continue
+					}
+
+					output_configs_noOverlap = append(output_configs_noOverlap, configNoOverlap)
+					output_configs_partialOverlap[n_0] = append(output_configs_partialOverlap[n_0], configPartialOverlap)
+					output_configs_fullOverlap[n_0] = append(output_configs_fullOverlap[n_0], configFullOverlap)
+				}
+				fileName := fmt.Sprintf("./newSizes/%d/noOverlap_%d.json", expectedSize, k_h)
+				err := exportSettingsToFileNoOverlap(output_configs_noOverlap, k_h, fileName)
+				if err != nil {
+					fmt.Println(err)
+				}
+				for n_0, v := range output_configs_partialOverlap {
+					fileName = fmt.Sprintf("./newSizes/%d/partialOverlap_%d.json", expectedSize, n_0)
+					err = exportSettingsToFileOverlap(v, n_0, fileName, "partial_overlap")
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+				for n_0, v := range output_configs_fullOverlap {
+					fileName = fmt.Sprintf("./newSizes/%d/fullOverlap_%d.json", expectedSize, n_0)
+					err = exportSettingsToFileOverlap(v, n_0, fileName, "full_overlap")
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+			}
+		}
+	}
+
+	// sum := 0
+	// lastLayerCount := k_h
+	// chosenComb := 0
+	// for i := 0; i < H; i++ {
+	// 	sum += lastLayerCount * combinations[chosenComb][H-1-i]
+	// 	lastLayerCount = lastLayerCount * combinations[chosenComb][H-1-i]
+	// }
+	//////
+	// fmt.Println(sum)
+	// fmt.Println(calculateSizeNoOverlap(combinations[chosenComb], k_h, H))
+	/////
+
+	// noOverlapConfigs := runCheck_noOverlap(512)
+	// for i := 0; i < len(noOverlapConfigs); i++ {
+	// 	// layerCount := len(noOverlapConfigs[i].K)
+	// 	// fmt.Println(noOverlapConfigs[i].N, noOverlapConfigs[i].K[layerCount-1])
+	// 	fmt.Printf("%d,\n", noOverlapConfigs[i].N)
+	// }
+	// configMap := make(map[int][][]int)
+	// sizes := []int{512}
+	// // sizes := []int{256, 512, 1024, 2048}
+
+	// for j := 0; j < len(sizes); j++ {
+	// 	overlapConfigs := runCheck_overlap(sizes[j], false)
+	// 	for i := 0; i < len(overlapConfigs); i++ {
+	// 		configMap[overlapConfigs[i].N[0]] = append(configMap[overlapConfigs[i].N[0]], overlapConfigs[i].K)
+	// 	}
+	// }
+
+	// // fmt.Println(configMap)
+
+	// // for key, value := range configMap {
+	// // 	fmt.Printf("n0_configs: [%d]\n", key)
+	// // 	fmt.Printf("k_configs: [\n")
+	// // 	// Iterate over each slice within the [][]int value
+	// // 	for _, v := range value {
+	// // 		fmt.Printf("%v,\n", v)
+	// // 	}
+	// // 	fmt.Println("]")
+	// // 	fmt.Println("\n---------\n")
+	// // }
+	// for key, value := range configMap {
+	// 	// Create the output struct
+	// 	jsonData := struct {
+	// 		N0Configs int     `json:"n0_configs"`
+	// 		KConfigs  [][]int `json:"k_configs"`
+	// 	}{
+	// 		N0Configs: key,
+	// 		KConfigs:  value,
+	// 	}
+
+	// 	// Create a file to save the JSON data
+	// 	fileName := fmt.Sprintf("./test/partialOverlap_%d.json", key)
+	// 	// fileName := fmt.Sprintf("./test/fullOverlap_%d.json", key)
+	// 	file, err := os.Create(fileName)
+	// 	if err != nil {
+	// 		fmt.Println("Error creating file:", err)
+	// 		continue
+	// 	}
+	// 	defer file.Close()
+
+	// 	// Encode the struct to JSON and write it to the file
+	// 	encoder := json.NewEncoder(file)
+	// 	encoder.SetIndent("", "  ") // pretty print JSON
+	// 	err = encoder.Encode(jsonData)
+	// 	if err != nil {
+	// 		fmt.Println("Error encoding JSON:", err)
+	// 		continue
+	// 	}
+
+	// 	fmt.Printf("Successfully created JSON file: %s\n", fileName)
+	// }
+}
+
+func CheckPowerOfTwo(n int) int {
+	//added one corner case if n is zero it will also consider as power 2
+	if n == 0 {
+		return 1
+	}
+	return n & (n - 1)
+}
+
+type TPMConfigFileNoOverlap struct {
+	TPMType         string   `json:"scenario"`
+	MaxSessionCount int      `json:"max_session_count"`
+	MaxIterations   int      `json:"max_iterations"`
+	MaxWorkerCount  int      `json:"max_worker_count"`
+	MConfigs        []int    `json:"m_configs"`
+	LConfigs        []int    `json:"l_configs"`
+	LearnRules      []string `json:"learn_rules"`
+	NConfigs        [][]int  `json:"n_configs"`
+	KLastConfigs    []int    `json:"klast_configs"`
+}
+
+func exportSettingsToFileNoOverlap(configList []tpm_controllers.TPMmSettings, k_last int, filename string) error {
+	// Open or create the file
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var NConfigs [][]int
+	for _, v := range configList {
+		NConfigs = append(NConfigs, v.N)
+	}
+
+	configFileData := TPMConfigFileNoOverlap{
+		TPMType:         "no_overlap",
+		MaxSessionCount: 20,
+		MaxIterations:   100000,
+		MaxWorkerCount:  12,
+		MConfigs:        []int{1},
+		LConfigs:        []int{3},
+		LearnRules:      []string{"Hebbian"},
+		NConfigs:        NConfigs,
+		KLastConfigs:    []int{k_last},
+	}
+
+	// Marshal the slice to JSON
+	jsonData, err := json.MarshalIndent(configFileData, "", "  ") // Pretty-printed JSON
+	if err != nil {
+		return err
+	}
+
+	// Write the JSON data to the file
+	_, err = file.Write(jsonData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type TPMConfigFileOverlap struct {
+	TPMType         string   `json:"scenario"`
+	MaxSessionCount int      `json:"max_session_count"`
+	MaxIterations   int      `json:"max_iterations"`
+	MaxWorkerCount  int      `json:"max_worker_count"`
+	MConfigs        []int    `json:"m_configs"`
+	LConfigs        []int    `json:"l_configs"`
+	LearnRules      []string `json:"learn_rules"`
+	N0Configs       []int    `json:"n0_configs"`
+	KConfigs        [][]int  `json:"k_configs"`
+}
+
+func exportSettingsToFileOverlap(configList []tpm_controllers.TPMmSettings, n_0 int, filename, scenario string) error {
+	// Open or create the file
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var KConfigs [][]int
+	for _, v := range configList {
+		KConfigs = append(KConfigs, v.K)
+	}
+
+	configFileData := TPMConfigFileOverlap{
+		TPMType:         scenario,
+		MaxSessionCount: 10,
+		MaxIterations:   100000,
+		MaxWorkerCount:  12,
+		MConfigs:        []int{1},
+		LConfigs:        []int{3},
+		LearnRules:      []string{"Hebbian"},
+		KConfigs:        KConfigs,
+		N0Configs:       []int{n_0},
+	}
+
+	// Marshal the slice to JSON
+	jsonData, err := json.MarshalIndent(configFileData, "", "  ") // Pretty-printed JSON
+	if err != nil {
+		return err
+	}
+
+	// Write the JSON data to the file
+	_, err = file.Write(jsonData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

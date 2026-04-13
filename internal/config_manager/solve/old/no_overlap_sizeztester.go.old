@@ -1,0 +1,258 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"tpm_sync/tpm_controllers"
+
+	"github.com/sourcegraph/conc/pool"
+)
+
+const maxLastLayerNeurons = 5
+const defaultNeuronDifference = 1
+const firstLayerStimStep = 16 //The first will not be increased by one, but by firstLayerStimStep
+const maxGoroutines = 4
+
+//Non overlapped TPMs are created using an array that specifies how many stimulus each neuron in each layer has.
+// For example: [2,3,4] means that the first layer has two stimulus each neuron, the second layer has three stimulus per neuron and the third layer has four stimullus per neuron
+
+func runCheck_noOverlap(expectedSize int) []tpm_controllers.TPMmSettings {
+	syncController := tpm_controllers.SyncController{}
+	workerPool := pool.NewWithResults[[]tpm_controllers.TPMmSettings]().
+		WithMaxGoroutines(maxGoroutines)
+
+	for i := 1; i <= maxLayerCount; i++ {
+		layerCount := i // capture loop variable safely
+		workerPool.Go(func() []tpm_controllers.TPMmSettings {
+			var localConfigList []tpm_controllers.TPMmSettings
+			N := createMinimalStimArray(layerCount)
+
+			for N[0] <= maxStimCount {
+				//For a set amount of layers, try all k_last values within the boundaries
+				for k_last := minNeuronsPerLayer; k_last <= maxLastLayerNeurons; k_last++ {
+					if k_last*N[layerCount-1]*8 > expectedSize {
+						break
+					}
+					config, err := syncController.SettingsFactory(N, k_last, default_L, default_M, "no_overlap", "Hebbian")
+					if err != nil {
+						fmt.Print(err)
+						continue
+					}
+					size := syncController.GetDataSizeFromConfig(config)
+					if size*8 > expectedSize {
+						break
+					}
+
+					if CheckPowerOfTwo(size*8) == 0 && size*8 == expectedSize {
+						configCopy := config
+						localConfigList = append(localConfigList, configCopy)
+					}
+				}
+				N = checkNextLayer_NoOverlap(N)
+			}
+			return localConfigList
+		})
+	}
+
+	// Wait for all goroutines and gather results
+	results := workerPool.Wait() // returns [][]TPMmSettings
+
+	// Merge all into one slice
+	var all []tpm_controllers.TPMmSettings
+	for _, batch := range results {
+		all = append(all, batch...)
+	}
+	return all
+}
+
+func checkNextLayer_NoOverlap(n_old []int) (n []int) {
+	h := len(n_old)
+	n = n_old
+	for i := 0; i < h; i++ {
+		lastLayerIndex := h - 1 - i
+		//If the previous layer is not maxed, or if the previous layer is the last layer
+		if n_old[lastLayerIndex] != maxStimCount || lastLayerIndex == 0 {
+			if lastLayerIndex == 0 {
+				n[lastLayerIndex] += firstLayerStimStep
+			} else {
+				n[lastLayerIndex]++
+			}
+			return n
+		}
+		//If the prev layer is maxed, we loop until we find a maxed layer
+		n[lastLayerIndex] = minStimCount
+	}
+
+	return n
+
+}
+
+func createMinimalStimArray(layerCount int) []int {
+	output := make([]int, layerCount)
+	for i := 0; i < len(output); i++ {
+		output[i] = minStimCount
+	}
+
+	return output
+}
+
+func getMaxN_H(k_h, H, expectedSize int) float64 {
+	//This func gets a theoretical max, it allows us to set a max range for the test
+
+	//The last layer needs to be maxed out, the other layers are to be tested.
+	testDivisor := 0
+	for i := 0; i < H; i++ {
+		testDivisor += int(math.Pow(2, float64(i)))
+	}
+	testDivisor *= k_h
+	n_H := float64(expectedSize) / float64(testDivisor)
+	return n_H
+}
+
+func getNoOverlapArrays() {
+	for i := 1; i <= maxLayerCount; i++ {
+		N := createMinimalStimArray(i)
+		for N[0] <= maxStimCount {
+
+		}
+	}
+}
+
+func runCheck_noOverlap_2(maxSize int) []tpm_controllers.TPMmSettings {
+	syncController := tpm_controllers.SyncController{}
+	workerPool := pool.NewWithResults[[]tpm_controllers.TPMmSettings]().
+		WithMaxGoroutines(maxGoroutines)
+
+	for i := 1; i <= maxLayerCount; i++ {
+		layerCount := i // capture loop variable safely
+		workerPool.Go(func() []tpm_controllers.TPMmSettings {
+			var localConfigList []tpm_controllers.TPMmSettings
+			N := createMinimalStimArray(layerCount)
+
+			for N[0] <= maxStimCount {
+				//For a set amount of layers, try all k_last values within the boundaries
+				for k_last := minNeuronsPerLayer; k_last <= maxLastLayerNeurons; k_last++ {
+					if k_last*N[layerCount-1]*8 > maxSize {
+						break
+					}
+					config, err := syncController.SettingsFactory(N, k_last, default_L, default_M, "no_overlap", "Hebbian")
+					if err != nil {
+						fmt.Print(err)
+						continue
+					}
+					size := syncController.GetDataSizeFromConfig(config)
+					if size*8 > maxSize {
+						break
+					}
+
+					if CheckPowerOfTwo(size*8) == 0 {
+						configCopy := config
+						localConfigList = append(localConfigList, configCopy)
+					}
+				}
+				N = checkNextLayer_NoOverlap(N)
+			}
+			return localConfigList
+		})
+	}
+
+	// Wait for all goroutines and gather results
+	results := workerPool.Wait() // returns [][]TPMmSettings
+
+	// Merge all into one slice
+	var all []tpm_controllers.TPMmSettings
+	for _, batch := range results {
+		all = append(all, batch...)
+	}
+	return all
+}
+
+func getMinSize(layerK, layerN, H int) int {
+	totalWeights := 0
+	for i := 0; i < H; i++ {
+		layerWeightCount := layerK * layerN //We can have at least two inputs per neuron
+		totalWeights += layerWeightCount
+
+		//Set for next iteration
+		layerK = layerWeightCount //In no overlap, each input is the output of another neuron
+		layerN = 2                //After the first layer, just try with two for now
+	}
+	return totalWeights
+}
+
+func calculateSizeNoOverlap(N []int, k_h, H int) int {
+	sum := 0
+	for i := 0; i < H-1; i++ {
+		mul := 1
+		for j := i; j < H-1; j++ {
+			mul *= N[j]
+		}
+		sum += mul
+	}
+	return (k_h * N[H-1]) * (1 + sum)
+}
+
+func getNCombinations(k_h, H, expectedSize int) [][]int {
+	var result [][]int
+	lastLayerIndex := H - 1
+	if expectedSize%k_h != 0 {
+		// fmt.Println("k_h needs to be a divisor of expectedSize")
+		return nil
+	}
+
+	//Setup the minimal stim array
+	N := createMinimalStimArray(H)
+	for true { //The last layer has to be a divisor of expectedSize
+		if expectedSize%N[lastLayerIndex] != 0 {
+			N[lastLayerIndex] += 1
+			continue
+		} else {
+			break
+		}
+	}
+
+	//Setup done, time to test
+	highestLayerIndex := 0
+	// maxedLayerIndex := -1
+	for true {
+		calculatedSize := calculateSizeNoOverlap(N, k_h, H)
+		if calculatedSize == expectedSize {
+			copyN := make([]int, H)
+			copy(copyN, N)
+
+			result = append(result, copyN)
+		}
+		if calculatedSize > expectedSize {
+			isHighestLayerMaxed := true
+			for i := 0; i < highestLayerIndex; i++ {
+				if N[i] != minStimCount { //We have maxed out the network size, but we can still add another stim to the next layer
+					isHighestLayerMaxed = false
+					N[i+1]++                  //If the layer is not maxed, add one stim. (Layers are maxed when all layers before are minStimCount)
+					for j := 0; j <= i; j++ { //reset all layers up to the highestLayerIndex
+						N[i] = minStimCount
+					}
+					break
+				}
+			}
+			if isHighestLayerMaxed {
+				highestLayerIndex++
+				if highestLayerIndex >= H {
+					break
+				}
+				// maxedLayerIndex++
+				N[highestLayerIndex]++
+				for i := 0; i < highestLayerIndex; i++ {
+					N[i] = minStimCount
+				}
+			}
+			continue //If we max the size limit, then we should not keep adding before testing the new N config
+			//  (or else the first layer is never maxed out)
+		}
+		N[0]++
+	}
+
+	return result
+
+}
+
+//

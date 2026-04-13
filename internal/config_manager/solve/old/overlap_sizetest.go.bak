@@ -1,0 +1,97 @@
+package main
+
+import (
+	"fmt"
+	"tpm_sync/tpm_controllers"
+)
+
+// Overlapped TPMS (both fully connected an partial) are created with the K array
+// K => How many neurons are in each layer
+func runCheck_overlap(expectedSize int, fullOverlap bool) []tpm_controllers.TPMmSettings {
+	syncController := tpm_controllers.SyncController{}
+	var configList []tpm_controllers.TPMmSettings
+	var tpm_type string
+	if fullOverlap {
+		tpm_type = "full_overlap"
+	} else {
+		tpm_type = "partial_overlap"
+	}
+	for i := 1; i <= maxLayerCount; i++ {
+
+		K := createMinimalNeuronArray(i)
+		stopCheck := false
+		for !stopCheck {
+			// fmt.Println(K)
+			for n_0 := minStimCount; n_0 <= maxStimCount; n_0++ {
+				config, err := syncController.SettingsFactory(K, n_0, default_L, default_M, tpm_type, "Hebbian")
+				if err != nil {
+					fmt.Print(err)
+					return nil
+				}
+				size := syncController.GetDataSizeFromConfig(config)
+
+				if CheckPowerOfTwo(size*8) == 0 {
+					// fmt.Println("Size:", size*8)
+					// if size*8 > 128 && size*8 < 4096 {
+					if size*8 == expectedSize {
+						fmt.Println("K:", K, "n_0:", n_0, "size (bits):", size*8)
+						configCopy := config
+						configList = append(configList, configCopy)
+						// fmt.Println(configList)
+					}
+				}
+			}
+
+			if K[0] >= maxNeuronsPerLayer {
+				if i > 1 {
+					if K[i-2]-K[i-1] == 1 && K[0]-K[1] == 1 { //If the last layers are full, and so are the first and second, we have reached the limit in all layers
+						stopCheck = true
+					}
+				} else {
+					stopCheck = true
+				}
+			}
+
+			K = checkNextLayer_overlap(K)
+		}
+	}
+
+	return configList
+}
+
+// For overlapped, we want a tree-like structure. This means that the next layer should always have less neurons than the last one
+func createMinimalNeuronArray(layerCount int) []int {
+	output := make([]int, layerCount)
+	output[layerCount-1] = minNeuronsPerLayer
+	for i := layerCount - 2; i >= 0; i-- {
+		output[i] = output[i+1] + 1
+	}
+
+	return output
+}
+
+func checkNextLayer_overlap(K []int) []int {
+	h := len(K)
+	for i := h - 1; i > 0; i-- {
+		if K[i-1]-K[i] == 1 {
+			continue
+		}
+		//If it is not at full cap, add one and reset all layers that come after
+		addOneNeuronAtIndex(K, i, h)
+		return K
+	}
+	addOneNeuronAtIndex(K, 0, h)
+	return K
+}
+
+func addOneNeuronAtIndex(K []int, i, h int) []int {
+	K[i]++
+	for j := h - 1; j > i; j-- {
+		if j == h-1 {
+			K[j] = minNeuronsPerLayer
+			continue
+		}
+		K[j] = K[j+1] + 1
+	}
+	return K
+}

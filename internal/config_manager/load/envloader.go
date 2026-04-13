@@ -42,9 +42,10 @@ func GetMaxSimulations() int {
 }
 
 func LoadPBApiKey() string {
-	apiKey, ok := os.LookupEnv("PB_APIKEY")
+	apiKey, ok := os.LookupEnv("PB_API_KEY")
 	if !ok {
-		log.Fatal("missing environment variable: PB_APIKEY")
+		log.Fatal("missing environment variable: PB_API_KEY")
+		apiKey = ""
 	}
 	return apiKey
 }
