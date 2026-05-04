@@ -20,6 +20,7 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string
 	}
 
 	simulationInstance := engine.SimulationInstance{
+		SimulationNumber: int(trackedState.GetSessionProgress()),
 		SimulationState: engine.SimulationState{
 			StateA: engine.NewMTPMState(settings),
 			StateB: engine.NewMTPMState(settings)},

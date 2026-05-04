@@ -12,6 +12,7 @@ func SimulateSimpleSync(settings engine.MTPMSettings) engine.SimulationInstance 
 	max_iterations := 100_000
 
 	simulationInstance := engine.SimulationInstance{
+		SimulationNumber: 0,
 		SimulationState: engine.SimulationState{
 			StateA: engine.NewMTPMState(settings),
 			StateB: engine.NewMTPMState(settings)},
@@ -50,6 +51,7 @@ func SimulateTrackedSync(trackedState *engine.TrackedMTPMSession, simConfig conf
 	settings := trackedState.Settings
 
 	simulationInstance := engine.SimulationInstance{
+		SimulationNumber: int(trackedState.GetSessionProgress()),
 		SimulationState: engine.SimulationState{
 			StateA: engine.NewMTPMState(settings),
 			StateB: engine.NewMTPMState(settings)},

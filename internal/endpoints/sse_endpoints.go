@@ -59,7 +59,6 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// lookup
 	session, ok := sessionManager.GetSSE(uid)
 	if !ok {
 		http.Error(w, "session not found.", http.StatusBadRequest)
@@ -72,7 +71,6 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// setup SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -83,22 +81,24 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// create channel for this subscriber
-	ch := make(chan []byte, 10) // small buffer, prevent blocking
+	ch := make(chan []byte, 10)
 	state.Subscribe(ch)
 	defer state.Unsubscribe(ch)
 	defer sessionManager.DeleteSSE(uid)
 
-	// stream loop
 	for {
 		select {
-		case <-r.Context().Done(): // client disconnected
+		case <-r.Context().Done():
 			return
 		case msg, ok := <-ch:
 			if !ok {
 				return
 			}
-			fmt.Fprintf(w, "data: %s\n\n", msg)
+			compressed, err := compressPayload(msg)
+			if err != nil {
+				continue
+			}
+			fmt.Fprintf(w, "data: %s\n\n", compressed)
 			flusher.Flush()
 		}
 	}

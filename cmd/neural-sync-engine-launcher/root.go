@@ -58,6 +58,7 @@ var rootCmd = &cobra.Command{
 		log.Println("Connected to Postgres!")
 		//Setup dbmanager to insert data every 2 seconds
 		//Now setup is done depending on the command - review later
+		queryManager = dbmanager.NewQueryManager(db)
 		attDataManager = dbmanager.NewDBManager(db, dbmanager.InsertAttackSessions, 500, 2*time.Second)
 		syncDataManager = dbmanager.NewDBManager(db, dbmanager.InsertSyncSessions, 500, 2*time.Second)
 		//defer datamanager.Close(context.Background())
@@ -92,6 +93,7 @@ var (
 	GlobalTrackingConfig   config_manager.TrackingConfig
 	sessionManager         *session_manager.SessionManager
 	simulationPool         *pool.Pool
+	queryManager           *dbmanager.QueryManager
 	attDataManager         *dbmanager.DBManager[dbmanager.AttackSessionLog]
 	syncDataManager        *dbmanager.DBManager[dbmanager.SyncSessionLog]
 	pbClient               *pushbullet.Client

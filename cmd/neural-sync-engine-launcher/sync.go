@@ -65,7 +65,7 @@ var syncCmd = &cobra.Command{
 }
 
 func RunSyncInstance(settings engine.MTPMSettings) {
-	trackedState := engine.NewTrackedSession(settings, GlobalSimulationConfig.SyncRepetitions) //Move outside and maybe new type for attacks?
+	trackedState := engine.NewTrackedSession(settings, GlobalSimulationConfig.SyncRepetitions, defaultTrackingBufferSize) //Move outside and maybe new type for attacks?
 	sessionManager.AddMTPM(trackedState.UID, trackedState)
 	defer sessionManager.DeleteMTPM(trackedState.UID)
 

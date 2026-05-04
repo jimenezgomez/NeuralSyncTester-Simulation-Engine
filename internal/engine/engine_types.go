@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -174,6 +176,7 @@ type SimulationProgress struct {
 }
 
 type SimulationInstance struct {
+	SimulationNumber int
 	SimulationState
 	SimulationProgress
 }
@@ -219,23 +222,28 @@ type SimulationResult struct {
 }
 
 type TrackedMTPMSession struct {
-	UID         string
-	StartTime   time.Time
-	Settings    MTPMSettings
-	MaxSimCount int
-	snapshot    atomic.Value // stores []byte (marshaled snapshot)
-	subs        map[chan []byte]struct{}
-	subCount    atomic.Int64
-	subsLock    sync.RWMutex
-	simProgress atomic.Int64
+	UID            string
+	StartTime      time.Time
+	Settings       MTPMSettings
+	MaxSimCount    int
+	snapshotBuffer *SimulationBuffer
+	subs           map[chan []byte]struct{}
+	subCount       atomic.Int64
+	subsLock       sync.RWMutex
+	simProgress    atomic.Int64
 }
 
-func NewTrackedSession(settings MTPMSettings, maxSimCount int) *TrackedMTPMSession {
+func NewTrackedSession(settings MTPMSettings, maxSimCount, maxBufferCount int) *TrackedMTPMSession {
+	uid, err := generateToken(16)
+	if err != nil {
+		uid = time.Now().Local().String()
+	}
 	ts := &TrackedMTPMSession{
-		UID:         "0",
-		Settings:    settings,
-		MaxSimCount: maxSimCount,
-		subs:        make(map[chan []byte]struct{}),
+		UID:            uid,
+		Settings:       settings,
+		MaxSimCount:    maxSimCount,
+		snapshotBuffer: NewSimulationBuffer(maxBufferCount),
+		subs:           make(map[chan []byte]struct{}),
 	}
 	return ts
 }
@@ -258,35 +266,26 @@ func (ts *TrackedMTPMSession) Unsubscribe(ch chan []byte) {
 }
 
 func (ts *TrackedMTPMSession) UpdateSnapshot(newSnap *SimulationInstance) {
-	ts.snapshot.Store(newSnap)
+	ts.snapshotBuffer.Push(*newSnap)
 }
 
-func (ts *TrackedMTPMSession) GetSnapshot() *SimulationInstance {
-	v := ts.snapshot.Load()
-	if v == nil {
-		return nil
-	}
-	// Important: return a deep copy if you don’t trust callers
-	return v.(*SimulationInstance)
-}
-
-func (ts *TrackedMTPMSession) GetSnapshotRaw() []byte {
-	snap := ts.GetSnapshot()
-	if snap == nil {
-		return nil
-	}
-	data, _ := json.Marshal(snap)
-	return data
+func (ts *TrackedMTPMSession) GetSnapshotRaw() []SimulationInstance {
+	snap := ts.snapshotBuffer.Flush()
+	return snap
 }
 
 func (ts *TrackedMTPMSession) UpdateAllSubscribers() {
 	ts.subsLock.RLock()
 	defer ts.subsLock.RUnlock()
 
-	data := ts.GetSnapshotRaw()
+	rawData := ts.GetSnapshotRaw()
+	marshalledData, err := json.Marshal(rawData)
+	if err != nil {
+
+	}
 	for subscriber := range ts.subs {
 		select {
-		case subscriber <- data:
+		case subscriber <- marshalledData:
 		default: // skip slow/broken client
 		}
 	}
@@ -306,4 +305,41 @@ func (ts *TrackedMTPMSession) GetSessionProgress() int64 {
 
 func (ts *TrackedMTPMSession) AddProgress() int64 {
 	return ts.simProgress.Add(1)
+}
+
+type SimulationBuffer struct {
+	mu       sync.Mutex
+	frames   []SimulationInstance
+	capacity int
+}
+
+func NewSimulationBuffer(capacity int) *SimulationBuffer {
+	return &SimulationBuffer{
+		frames:   make([]SimulationInstance, 0, capacity),
+		capacity: capacity,
+	}
+}
+
+func (b *SimulationBuffer) Push(instance SimulationInstance) (full bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.frames = append(b.frames, instance)
+	return len(b.frames) >= b.capacity
+}
+
+func (b *SimulationBuffer) Flush() []SimulationInstance {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	out := make([]SimulationInstance, len(b.frames))
+	copy(out, b.frames)
+	b.frames = b.frames[:0] // reset without realloc
+	return out
+}
+
+func generateToken(n int) (string, error) {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }

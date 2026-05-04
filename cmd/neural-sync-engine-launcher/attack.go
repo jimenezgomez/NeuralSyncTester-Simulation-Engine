@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultTrackingBufferSize = 256
+
 var attackCmd = &cobra.Command{
 	Use:   "attack",
 	Short: "Run attacks simulations in CLI mode (no Endpoints available)",
@@ -67,7 +69,7 @@ var attackCmd = &cobra.Command{
 }
 
 func RunInstance(settings engine.MTPMSettings) {
-	trackedState := engine.NewTrackedSession(settings, GlobalSimulationConfig.SyncRepetitions) //Move outside and maybe new type for attacks?
+	trackedState := engine.NewTrackedSession(settings, GlobalSimulationConfig.SyncRepetitions, defaultTrackingBufferSize) //Move outside and maybe new type for attacks?
 	sessionManager.AddMTPM(trackedState.UID, trackedState)
 	defer sessionManager.DeleteMTPM(trackedState.UID)
 
