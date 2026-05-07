@@ -10,6 +10,6 @@ var serverCmd = &cobra.Command{
 	Short: "Run the NeuralSyncTester server",
 	Long:  `Starts the HTTP server for SSE and other endpoints for NeuralSyncTester.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		endpoints.RunServerMode(GlobalSimulationConfig, GlobalTrackingConfig, queryManager)
+		endpoints.RunServerMode(GlobalSimulationConfig, GlobalTrackingConfig, queryManager, sessionManager)
 	},
 }

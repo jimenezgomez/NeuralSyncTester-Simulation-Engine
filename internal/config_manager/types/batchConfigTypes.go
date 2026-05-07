@@ -8,6 +8,12 @@ import (
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_stimHandlers"
 )
 
+// batchSettingsFileWithCombinations is the raw JSON structure for combination-based batch settings.
+type BatchSettingsFileWithCombinations struct {
+	BaseBatchSettings
+	KNCombinations [][][]int `json:"k_n_combinations"`
+}
+
 type BatchScenarioWrapper struct {
 	Scenario string `json:"scenario"`
 }

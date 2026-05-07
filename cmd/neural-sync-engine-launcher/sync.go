@@ -6,6 +6,7 @@ import (
 
 	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/dbmanager"
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/endpoints"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine/sync"
 	_ "github.com/lib/pq"
@@ -17,8 +18,11 @@ var syncCmd = &cobra.Command{
 	Short: "Run sync simulations in CLI mode (no Endpoints available)",
 	Run: func(cmd *cobra.Command, args []string) {
 
+		go endpoints.RunServerMode(GlobalSimulationConfig, GlobalTrackingConfig, queryManager, sessionManager)
+
 		fmt.Println("Using config directory: ", GlobalSimulationConfig.BatchPath)
-		batchGroup, err := config_manager.ScanAndLoadBatchSettings(GlobalSimulationConfig.BatchPath)
+		// batchGroup, err := config_manager.ScanAndLoadBatchSettings(GlobalSimulationConfig.BatchPath)
+		batchGroup, err := config_manager.ScanAndLoadBatchSettings_Combo(GlobalSimulationConfig.BatchPath)
 		if err != nil {
 			log.Fatalf("Error occurred: %v", err)
 		}
@@ -39,9 +43,11 @@ var syncCmd = &cobra.Command{
 		}
 
 		simulationPool.Wait()
-		// err = pb.PushNote(devs[0].Iden, "All config files have finished", "All files have finished simulating attacks.")
-		if err != nil {
-			panic(err)
+		if pbClient != nil {
+			err = pbClient.PushNote(pbDevices[0].Iden, "All config files have finished", "All files have finished simulating attacks.")
+			if err != nil {
+				log.Print("Error on PB push:", err)
+			}
 		}
 		fmt.Println("All configuration files finished.")
 		// if err := simulationPool.Wait(); err != nil {
@@ -70,13 +76,13 @@ func RunSyncInstance(settings engine.MTPMSettings) {
 	defer sessionManager.DeleteMTPM(trackedState.UID)
 
 	for i := 0; i < GlobalSimulationConfig.SyncRepetitions; i++ {
-		sync.SimulateTrackedSync(trackedState, GlobalSimulationConfig, GlobalTrackingConfig)
 		result := sync.SimulateTrackedSync(trackedState, GlobalSimulationConfig, GlobalTrackingConfig)
 		sessionLog, err := dbmanager.NewLogFromResult(result)
 		if err != nil {
 			panic("Fatal error when creating a new attack session log: " + err.Error())
 		}
 		syncDataManager.Add(sessionLog)
+		trackedState.AddProgress()
 	}
 
 }

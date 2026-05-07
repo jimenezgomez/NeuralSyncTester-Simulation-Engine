@@ -10,7 +10,7 @@ import (
 )
 
 // NewSSESessionHandler handles requests to create a new SSE session
-func NewSSESessionHandler(w http.ResponseWriter, r *http.Request) {
+func NewSSESessionHandler(w http.ResponseWriter, r *http.Request, sessionManager *session_manager.SessionManager) {
 	// parse required params
 	syncSessionUID := r.URL.Query().Get("session_uid")
 	if syncSessionUID == "" {
@@ -52,7 +52,7 @@ func NewSSESessionHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func SSEHandler(w http.ResponseWriter, r *http.Request) {
+func SSEHandler(w http.ResponseWriter, r *http.Request, sessionManager *session_manager.SessionManager) {
 	uid := r.URL.Query().Get("uid")
 	if uid == "" {
 		http.Error(w, "missing 'uid' parameter", http.StatusBadRequest)

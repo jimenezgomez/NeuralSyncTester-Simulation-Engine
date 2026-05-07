@@ -8,10 +8,14 @@ func SolveSize_Overlap(H, targetSize, minN0, maxN0 int, overlapType string) []Co
 	var results []Combination
 
 	// NRev accumulates N values in reverse order: NRev[0]=N[H-1], NRev[1]=N[H-2], ...
-	var search func(depth int, K []int, remaining, Ncur, N0 int)
-	search = func(depth int, K []int, remaining, Ncur, N0 int) {
-		if depth == H {
+	var search func(depth int, KRev []int, remaining, Ncur, N0 int)
+	search = func(depth int, KRev []int, remaining, Ncur, N0 int) {
+		if depth == 0 {
 			if remaining == 0 {
+				K := make([]int, H)
+				for j, v := range KRev {
+					K[H-1-j] = v
+				}
 				var N []int
 				switch overlapType {
 				case "FULL OVERLAP":
@@ -19,7 +23,16 @@ func SolveSize_Overlap(H, targetSize, minN0, maxN0 int, overlapType string) []Co
 				case "PARTIAL OVERLAP":
 					N = buildNPartialOverlap(K, N0)
 				}
-				results = append(results, Combination{K: K, N: N})
+				badResult := false
+				for _, v := range N {
+					if v < 1 {
+						badResult = true
+						break
+					}
+				}
+				if !badResult {
+					results = append(results, Combination{K: K, N: N})
+				}
 			}
 			return
 		}
@@ -28,7 +41,7 @@ func SolveSize_Overlap(H, targetSize, minN0, maxN0 int, overlapType string) []Co
 		// The next layer to the left will have K = Kcur * Ni.
 		maxK := remaining / Ncur
 		for Ki := 2; Ki <= maxK; Ki++ {
-			search(depth+1, append(K, Ki), remaining-Ncur*Ki, Ncur*Ki, N0)
+			search(depth-1, append(KRev, Ki), remaining-Ncur*Ki, Ncur*Ki, N0)
 		}
 	}
 
@@ -44,7 +57,7 @@ func SolveSize_Overlap(H, targetSize, minN0, maxN0 int, overlapType string) []Co
 	for N0 := minN0; N0 <= maxN0; N0++ {
 		// Start filling from the last layer (depth=0 in NRev = layer H-1).
 		// Kcur = Kh for the last layer.
-		search(0, []int{}, targetSize, N0, N0)
+		search(H, []int{}, targetSize, N0, N0)
 	}
 
 	return results
