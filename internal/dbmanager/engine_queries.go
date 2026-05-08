@@ -68,15 +68,15 @@ func InsertAttackSessions(ctx context.Context, db *sql.DB, sessions []AttackSess
 
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO attack_sessions (
-			network_size, first_k, first_n, last_k, last_n,
+			network_size, first_k, first_n, last_k, last_n, total_k, total_n,
 			start_time, end_time, stimulate_iterations, learn_iterations,
 			k, n, l, m, h, learn_rule, scenario,
-			attack_type, attacker_count, attacker_scores, session_status
+			attack_type, attacker_count, attacker_overlaps, best_attacker_overlap, best_attacker_score, session_status
 		) VALUES (
-			$1,$2,$3,$4,$5,
-			$6,$7,$8,$9,
-			$10,$11,$12,$13,$14,$15,$16,
-			$17,$18,$19,$20
+			$1,$2,$3,$4,$5, $6, $7,
+			$8,$9,$10,$11,
+			$12,$13,$14,$15,$16,$17,$18,
+			$19,$20,$21,$22, $23, $24
 		)
 	`)
 	if err != nil {
@@ -89,10 +89,10 @@ func InsertAttackSessions(ctx context.Context, db *sql.DB, sessions []AttackSess
 		nBytes, _ := json.Marshal(s.N)
 
 		_, err = stmt.ExecContext(ctx,
-			s.NetworkSize, s.FirstK, s.FirstN, s.LastK, s.LastN,
+			s.NetworkSize, s.FirstK, s.FirstN, s.LastK, s.LastN, s.TotalK, s.TotalN,
 			s.StartTime, s.EndTime, s.StimulateIterations, s.LearnIterations,
 			kBytes, nBytes, s.L, s.M, s.H, s.LearnRule, s.Scenario,
-			s.AttackType, s.AttackerCountLimit, s.AttackerScores, s.SessionStatus,
+			s.AttackType, s.AttackerCountLimit, s.AttackerOverlaps, s.BestAttackerOverlap, s.BestAttackerScore, s.SessionStatus,
 		)
 		if err != nil {
 			return err

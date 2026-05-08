@@ -44,8 +44,8 @@ var sizeSolverCmd = &cobra.Command{
 			LearnRules: []string{
 				// Only using random walk because of fig 3.24 on Ruttor 2006 thesis
 				// "Hebbian",
-				"Anti-Hebbian",
-				// "Random-Walk",
+				// "Anti-Hebbian",
+				"Random-Walk",
 			},
 			// You must specify the type (e.g., []int) for these slices
 			MConfigs: []int{1},

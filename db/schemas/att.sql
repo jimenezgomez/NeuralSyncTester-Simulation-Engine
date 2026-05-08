@@ -5,8 +5,10 @@ CREATE TABLE IF NOT EXISTS attack_sessions (
     first_n INTEGER,
     last_k INTEGER,
     last_n INTEGER,
+    total_k INTEGER,
+    total_n INTEGER,
     start_time TIMESTAMPTZ,
-    end_time TIMESTAMPTZ DEFAULT now(),
+    end_time TIMESTAMPTZ,
     stimulate_iterations INTEGER,
     learn_iterations INTEGER,
     k JSONB,
@@ -18,7 +20,9 @@ CREATE TABLE IF NOT EXISTS attack_sessions (
     scenario TEXT,
     attack_type TEXT,
     attacker_count INTEGER,
-    attacker_scores JSONB,
+    attacker_overlaps JSONB,
+    best_attacker_overlap DOUBLE PRECISION,
+    best_attacker_score DOUBLE PRECISION,
     session_status TEXT
 );
 

@@ -41,10 +41,13 @@ func DotProdWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) int
 	return sum
 }
 
-func CosineSimWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) float64 {
+// Calculates the overlap using the cosine similarity and gets the attacker scores as the amounr of correct values for each independent weight
+func CosineSimWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) (float64, int) {
 	dot := 0
 	normA := 0
 	normB := 0
+
+	score := 0
 
 	for layer := 0; layer < h; layer++ {
 		for i := 0; i < k[layer]; i++ {
@@ -55,15 +58,21 @@ func CosineSimWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) f
 				dot += va * vb
 				normA += va * va
 				normB += vb * vb
+
+				// If these weights are the same value at the same position, add score
+				if va == vb {
+					score++
+				}
+
 			}
 		}
 	}
 
 	if normA == 0 || normB == 0 {
-		return 0 // avoid division by zero
+		return 0, score // avoid division by zero
 	}
 
-	return float64(dot) / (math.Sqrt(float64(normA)) * math.Sqrt(float64(normB)))
+	return float64(dot) / (math.Sqrt(float64(normA)) * math.Sqrt(float64(normB))), score
 }
 
 func CreateRandomStimulusArray(k int, n int, m int) [][]int {

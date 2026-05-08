@@ -6,6 +6,7 @@ import (
 
 	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/load"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/dbmanager"
+	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/endpoints"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine"
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/engine/attacks"
 	_ "github.com/lib/pq"
@@ -19,8 +20,10 @@ var attackCmd = &cobra.Command{
 	Short: "Run attacks simulations in CLI mode (no Endpoints available)",
 	Run: func(cmd *cobra.Command, args []string) {
 
+		go endpoints.RunServerMode(GlobalSimulationConfig, GlobalTrackingConfig, queryManager, sessionManager)
+
 		fmt.Println("Using config directory: ", GlobalSimulationConfig.BatchPath)
-		batchGroup, err := config_manager.ScanAndLoadBatchSettings(GlobalSimulationConfig.BatchPath)
+		batchGroup, err := config_manager.ScanAndLoadBatchSettings_Combo(GlobalSimulationConfig.BatchPath)
 		if err != nil {
 			log.Fatalf("Error occurred: %v", err)
 		}
@@ -81,6 +84,7 @@ func RunInstance(settings engine.MTPMSettings) {
 				panic("Fatal error when creating a new attack session log: " + err.Error())
 			}
 			attDataManager.Add(sessionLog)
+			trackedState.AddProgress()
 		}
 	}
 

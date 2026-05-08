@@ -7,13 +7,13 @@ import (
 	"github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/pkg/tpm/tpm_core"
 )
 
-func NewGeomAttack(attackSettings AttackSettings, simulationInstance engine.SimulationInstance) AttackInstance {
+func NewGeomAttack(attackSettings AttackSettings, simulationInstance *engine.SimulationInstance) AttackInstance {
 	attackerCount := attackSettings.AttackerLimit
 	attackers := make([]*AttackerState, attackerCount)
 	for i := 0; i < attackerCount; i++ {
 		attackers[i] = &AttackerState{
 			MTPMState:     engine.NewMTPMState(attackSettings.MTPMSettings),
-			attackerScore: 0, weightScore: 0}
+			attackerScore: 0, weightOverlap: 0}
 	}
 	attackInstance := AttackInstance{
 		SimulationInstance: simulationInstance,
@@ -36,11 +36,14 @@ func CheckGeomAttack(settings *AttackSettings, sessionState *AttackInstance) int
 	state := 0
 	if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, sessionState.StateB) {
 		state = 1
-	}
-	for _, attacker := range sessionState.attackerStates {
-		if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, attacker.MTPMState) {
-			state = -1
-			break
+		for _, attacker := range sessionState.attackerStates {
+			if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, attacker.MTPMState) {
+				state = -1
+				break
+			}
+			if attacker.attackerScore >= ATTACKER_SCORE_THRESHOLD {
+				state = -2
+			}
 		}
 	}
 
@@ -52,11 +55,14 @@ func learnGeomAttack(settings *AttackSettings, attacker *AttackerState, output_A
 	if attacker.NetworkOutput != output_A {
 		flipLowestLocalField(settings.MTPMSettings, attacker)
 	}
-	attacker.Learn(settings.MTPMSettings, output_A) //"... then the attacker updates C by the usual learning rule.
+	// attacker.Learn(settings.MTPMSettings, output_A) //"... then the attacker updates C by the usual learning rule.
+	attacker.LearnWithOutputs(settings.MTPMSettings, output_A, output_B) //"... then the attacker updates C by the usual learning rule.
 	// 	- so i guess it is not like the naive attacker and we use the local output?"
 
 }
 
+// flipLowestLocalField Flips the output of the neuron with the lowest confidence (low local field, inner prod)
+// The flip is done in the outputBuffer on each of the attackers
 func flipLowestLocalField(settings engine.MTPMSettings, sessionState *AttackerState) {
 	lastLayerIndex := settings.H - 1
 	lastLayer := sessionState.Weights[lastLayerIndex]

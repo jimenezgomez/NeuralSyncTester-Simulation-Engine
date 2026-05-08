@@ -14,6 +14,8 @@ type AttackSessionLog struct {
 	FirstN              int
 	LastK               int
 	LastN               int
+	TotalK              int
+	TotalN              int
 	StartTime           time.Time
 	EndTime             time.Time
 	StimulateIterations int
@@ -27,7 +29,9 @@ type AttackSessionLog struct {
 	Scenario            string
 	AttackType          string
 	AttackerCountLimit  int
-	AttackerScores      interface{}
+	AttackerOverlaps    interface{}
+	BestAttackerOverlap float64
+	BestAttackerScore   float64
 	FinalState          interface{}
 	SessionStatus       string
 }
@@ -45,7 +49,7 @@ func NewAttackSessionLog(result attacks.AttackResult) (AttackSessionLog, error) 
 	if err != nil {
 		return AttackSessionLog{}, err
 	}
-	scoresBytes, err := json.Marshal(result.AttackerScores)
+	scoresBytes, err := json.Marshal(result.AttackerOverlaps)
 	if err != nil {
 		return AttackSessionLog{}, err
 	}
@@ -56,6 +60,8 @@ func NewAttackSessionLog(result attacks.AttackResult) (AttackSessionLog, error) 
 		FirstN:              firstOrZero(mtpmSettings.N),
 		LastK:               lastOrZero(mtpmSettings.K),
 		LastN:               lastOrZero(mtpmSettings.N),
+		TotalK:              sumArray(mtpmSettings.K),
+		TotalN:              sumArray(mtpmSettings.N),
 		StartTime:           result.StartTime,
 		EndTime:             result.EndTime,
 		StimulateIterations: result.FinalState.StimulateIterations,
@@ -69,7 +75,18 @@ func NewAttackSessionLog(result attacks.AttackResult) (AttackSessionLog, error) 
 		Scenario:            mtpmSettings.Scenario,
 		AttackType:          attSettings.AttackType,
 		AttackerCountLimit:  attSettings.AttackerLimit,
-		AttackerScores:      scoresBytes,
+		AttackerOverlaps:    scoresBytes,
+		BestAttackerOverlap: result.BestAttackerOverlap,
+		BestAttackerScore:   result.BestAttackerScore,
 		SessionStatus:       result.SessionStatus,
 	}, nil
+}
+
+func sumArray(nums []int) int {
+	total := 0
+	// _ ignores the index, num is the current value
+	for _, num := range nums {
+		total += num
+	}
+	return total
 }

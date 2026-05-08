@@ -8,13 +8,13 @@ import (
 //L. N. Shacham, E. Klein, R. Mislovaty, I. Kanter, and W. Kinzel. Cooperating attackers in neural cryptography.
 // Phys. Rev. E, 69(6):066137, 2004.
 
-func NewMajorityAttack(attackSettings AttackSettings, simulationInstance engine.SimulationInstance) AttackInstance {
+func NewMajorityAttack(attackSettings AttackSettings, simulationInstance *engine.SimulationInstance) AttackInstance {
 	attackerCount := attackSettings.AttackerLimit
 	attackers := make([]*AttackerState, attackerCount)
 	for i := 0; i < attackerCount; i++ {
 		attackers[i] = &AttackerState{
 			MTPMState:     engine.NewMTPMState(attackSettings.MTPMSettings),
-			attackerScore: 0, weightScore: 0}
+			attackerScore: 0, weightOverlap: 0}
 	}
 	attackInstance := AttackInstance{
 		SimulationInstance: simulationInstance,
@@ -47,8 +47,9 @@ func ExecMajorityAttack(settings *AttackSettings, sessionState *AttackInstance, 
 	} else {
 		referenceCombination := getMostCommonCombination(*settings, sessionState.attackerStates, input_stimulus, output_A)
 		for _, attacker := range sessionState.attackerStates {
-			attacker.Stimulate(settings.MTPMSettings, input_stimulus)
+			// attacker.Stimulate(settings.MTPMSettings, input_stimulus)
 			attacker.LearnWithFullReference(settings.MTPMSettings, output_A, output_B, referenceCombination)
+			// attacker.LearnWithOutputs(settings.MTPMSettings, output_A, output_B) //"... then the attacker updates C by the usual learning rule.
 		}
 	}
 
@@ -58,12 +59,14 @@ func CheckMajorityAttack(settings *AttackSettings, sessionState *AttackInstance)
 	state := 0
 	if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, sessionState.StateB) {
 		state = 1
-	}
-	for _, attacker := range sessionState.attackerStates {
-		if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, attacker.MTPMState) {
-			state = -1
-			break
+		for _, attacker := range sessionState.attackerStates {
+			if engine.CompareWeights(settings.MTPMSettings, sessionState.StateA, attacker.MTPMState) {
+				state = -1
+				break
+			}
+
 		}
+
 	}
 
 	return state

@@ -14,13 +14,13 @@ type AttackSettings struct {
 
 type AttackerState struct {
 	engine.MTPMState
-	attackerScore int     //The score based on the attack type
-	weightScore   float64 //The score based on the dot product
+	attackerScore float64 //The score based on the attack type
+	weightOverlap float64 //The score based on the dot product
 
 }
 
 type AttackInstance struct {
-	engine.SimulationInstance
+	*engine.SimulationInstance
 	attackerCount  int
 	attackerStates []*AttackerState
 	attackerExec   AttackExec
@@ -28,12 +28,14 @@ type AttackInstance struct {
 }
 
 type AttackResult struct {
-	Settings       AttackSettings
-	FinalState     engine.SimulationInstance
-	AttackerScores []float64
-	SessionStatus  string
-	StartTime      time.Time
-	EndTime        time.Time
+	Settings            AttackSettings
+	FinalState          engine.SimulationInstance
+	AttackerOverlaps    []float64
+	BestAttackerOverlap float64
+	BestAttackerScore   float64
+	SessionStatus       string
+	StartTime           time.Time
+	EndTime             time.Time
 }
 
 type AttackExec func(settings *AttackSettings, sessionState *AttackInstance, output_A, output_B int, input_stimulus [][]int)

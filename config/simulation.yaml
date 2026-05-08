@@ -1,11 +1,10 @@
-# batch_path: "config/experimento_sim/base"
-# batch_path: "config/experimento_sim/size_3k"
-batch_path: "config/experimento_slim/multi_layer_3k_slim"
+batch_path: "config/experimento_slim/base"
+# batch_path: "config/experimento_slim/multi_layer_3k_slim"
 # Maximum number of iterations allowed for a simulation run
 iteration_limit: 100000
 
 # Number of synchronization repetitions to perform
-sync_repetitions: 10
+sync_repetitions: 100
 
 
 ##-----------------ATTACKS---------------##
