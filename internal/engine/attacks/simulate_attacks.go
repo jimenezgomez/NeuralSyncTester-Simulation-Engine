@@ -105,6 +105,8 @@ func RunTrackedAttack(trackedState *engine.TrackedMTPMSession, attackType string
 	status := "LIMIT_REACHED"
 
 	switch checkResult {
+	case 0:
+		status = "LIMIT_REACHED"
 	case 1:
 		if bestAttackerScore > ATTACKER_SCORE_THRESHOLD {
 			status = "ATTACK_PARTIAL_SUCCESS"
