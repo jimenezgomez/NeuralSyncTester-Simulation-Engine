@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -281,7 +282,8 @@ func (ts *TrackedMTPMSession) UpdateAllSubscribers() {
 	rawData := ts.GetSnapshotRaw()
 	marshalledData, err := json.Marshal(rawData)
 	if err != nil {
-
+		log.Printf("session %s: failed to marshal snapshot: %v", ts.UID, err)
+		return
 	}
 	for subscriber := range ts.subs {
 		select {

@@ -24,6 +24,9 @@ type SimulationConfig struct {
 	StoreTopAttackerLimit int      `yaml:"store_top_attacker_limit"`
 	SyncRepetitions       int      `yaml:"sync_repetitions"`
 	AttackModes           []string `yaml:"attack_modes"`
+	// DatabaseName optionally overrides DB_NAME from .env, so an experiment
+	// can run against its own database. Empty means fall back to .env.
+	DatabaseName string `yaml:"database_name"`
 }
 
 // DefaultSimulationConfig returns defaults equivalent
@@ -77,6 +80,9 @@ func mergeSimulationConfig(base, partial SimulationConfig) SimulationConfig {
 	}
 	if partial.AttackModes != nil {
 		base.AttackModes = partial.AttackModes
+	}
+	if strings.TrimSpace(partial.DatabaseName) != "" {
+		base.DatabaseName = partial.DatabaseName
 	}
 	return base
 }

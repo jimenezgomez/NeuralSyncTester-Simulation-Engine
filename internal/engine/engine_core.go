@@ -11,18 +11,18 @@ func (mtpmState *MTPMState) Stimulate(settings MTPMSettings, firstLayerInput [][
 
 	//Stimulate all layers, to avoid overflowing the inputs array we do the last layer separately -> (There is no next layer, no more inputs)
 	for layer := 0; layer < settings.H-1; layer++ {
-		//calculate outputs for this layer
+		//calculate outputs for this layer (reuses outputs[layer]'s backing array when possible)
 		outputs[layer] = tpm_core.StimulateLayer(
-			inputs[layer], mtpmState.Weights[layer],
+			outputs[layer], inputs[layer], mtpmState.Weights[layer],
 			settings.K[layer], settings.N[layer])
-		//set inputs for next layer
+		//set inputs for next layer (reuses inputs[layer+1]'s backing array when possible)
 		inputs[layer+1] = settings.stimulationHandlers.CreateStimulusFromLayerOutput(
-			outputs[layer],
+			inputs[layer+1], outputs[layer],
 			settings.K[layer+1], settings.N[layer+1])
 	}
 	//Stimulate the last layer
 	outputs[settings.H-1] = tpm_core.StimulateLayer(
-		inputs[settings.H-1], mtpmState.Weights[settings.H-1],
+		outputs[settings.H-1], inputs[settings.H-1], mtpmState.Weights[settings.H-1],
 		settings.K[settings.H-1], settings.N[settings.H-1])
 
 	//Calculate the final network output

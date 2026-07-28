@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	config_solver "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/solve"
 	config_manager "github.com/jimenezgomez/NeuralSyncTester-Simulation-Engine/internal/config_manager/types"
@@ -52,7 +53,7 @@ var sizeSolverCmd = &cobra.Command{
 			LConfigs: []int{3, 5, 7, 10},
 		}
 
-		base_filename := "/home/kwwa/NST-2/NeuralSyncTester-Simulation-Engine/config/experimento_slim/multi_layer_3k_slim"
+		base_filename := filepath.Join("config", "experimento_slim", "multi_layer_3k_slim")
 		total_combi_count := 0
 
 		lastKAmount := 3

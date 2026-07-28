@@ -14,15 +14,23 @@ func (tpm FullOverlapTPM) CreateStimulationStructure(k []int, n_0 int) []int {
 	return n
 }
 
-func (tpm FullOverlapTPM) CreateStimulusFromLayerOutput(outputs []int, k_h int, n_h int) [][]int {
-	new_stimulus := make([][]int, k_h)
+func (tpm FullOverlapTPM) CreateStimulusFromLayerOutput(dst [][]int, outputs []int, k_h int, n_h int) [][]int {
+	if cap(dst) < k_h {
+		dst = make([][]int, k_h)
+	} else {
+		dst = dst[:k_h]
+	}
 	for i := 0; i < k_h; i++ {
-		new_stimulus[i] = make([]int, n_h)
+		if cap(dst[i]) < n_h {
+			dst[i] = make([]int, n_h)
+		} else {
+			dst[i] = dst[i][:n_h]
+		}
 		//When fully connected, the stim count is the same as the neuron count from the prev layer
 		for j := 0; j < n_h; j++ {
-			new_stimulus[i][j] = outputs[j] //So this maps outputs to inputs, 1 to 1
+			dst[i][j] = outputs[j] //So this maps outputs to inputs, 1 to 1
 		}
 	}
 
-	return new_stimulus
+	return dst
 }

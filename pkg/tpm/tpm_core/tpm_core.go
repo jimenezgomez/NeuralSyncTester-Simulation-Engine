@@ -2,16 +2,23 @@ package tpm_core
 
 import "math"
 
-func StimulateLayer(stimu [][]int, weights [][]int, k int, n int) []int {
+// StimulateLayer writes this layer's outputs into dst, reusing its backing
+// array when it already has capacity k (it always does after the first call
+// for a given layer, since k is fixed for the lifetime of a simulation).
+func StimulateLayer(dst []int, stimu [][]int, weights [][]int, k int, n int) []int {
+	if cap(dst) < k {
+		dst = make([]int, k)
+	} else {
+		dst = dst[:k]
+	}
 
-	layerOutputs := make([]int, k)
 	for i := 0; i < k; i++ {
 		localField := NeuronLocalField(n, weights[i], stimu[i])
 		localOutput := OutputSigma(localField)
-		layerOutputs[i] = localOutput
+		dst[i] = localOutput
 	}
 
-	return layerOutputs
+	return dst
 }
 
 func CompareWeights(h int, k []int, n []int, weights_a, weights_b [][][]int) bool {

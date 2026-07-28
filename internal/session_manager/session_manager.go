@@ -141,7 +141,14 @@ func (sm *SessionManager) cleanupExpired() {
 }
 
 func (sm *SessionManager) updateAllSnapshots() {
+	sm.mu.RLock()
+	sessions := make([]*engine.TrackedMTPMSession, 0, len(sm.sessionsMTPM))
 	for _, v := range sm.sessionsMTPM {
+		sessions = append(sessions, v)
+	}
+	sm.mu.RUnlock()
+
+	for _, v := range sessions {
 		v.UpdateAllSubscribers()
 	}
 }

@@ -21,14 +21,22 @@ func (tpm PartialOverlapTPM) CreateStimulationStructure(k []int, n_0 int) []int 
 	return n
 }
 
-func (tpm PartialOverlapTPM) CreateStimulusFromLayerOutput(outputs []int, k_h int, n_h int) [][]int {
-	new_stimulus := make([][]int, k_h)
+func (tpm PartialOverlapTPM) CreateStimulusFromLayerOutput(dst [][]int, outputs []int, k_h int, n_h int) [][]int {
+	if cap(dst) < k_h {
+		dst = make([][]int, k_h)
+	} else {
+		dst = dst[:k_h]
+	}
 	for i := 0; i < k_h; i++ {
-		new_stimulus[i] = make([]int, n_h)
+		if cap(dst[i]) < n_h {
+			dst[i] = make([]int, n_h)
+		} else {
+			dst[i] = dst[i][:n_h]
+		}
 		for j := 0; j < n_h; j++ {
-			new_stimulus[i][j] = outputs[j+i]
+			dst[i][j] = outputs[j+i]
 		}
 	}
 
-	return new_stimulus
+	return dst
 }

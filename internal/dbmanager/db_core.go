@@ -70,17 +70,17 @@ func (m *DBManager[T]) loop() {
 
 // Flush writes the buffer to the DB
 func (m *DBManager[T]) Flush(ctx context.Context) {
+	m.mu.Lock()
 	if len(m.buffer) == 0 {
+		m.mu.Unlock()
 		return
 	}
-	m.mu.Lock()
 	batch := m.buffer
 	m.buffer = make([]T, 0, m.maxBatchSize)
 	m.mu.Unlock()
 	if err := m.insertFunc(ctx, m.db, batch); err != nil {
-		// TODO: logging / retry policy
-		fmt.Println("ERROR INSERTING INTO DB!")
-		panic(err)
+		// TODO: retry policy
+		fmt.Printf("ERROR INSERTING INTO DB! (%d items lost): %v\n", len(batch), err)
 	}
 }
 

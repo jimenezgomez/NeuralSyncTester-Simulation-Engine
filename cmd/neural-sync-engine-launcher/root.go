@@ -44,9 +44,19 @@ var rootCmd = &cobra.Command{
 		simulationPool = pool.New().WithMaxGoroutines(maxSimulations)
 		dbEnv := config_manager.LoadDBEnv()
 
+		// Database name from config wins; otherwise fall back to DB_NAME in .env.
+		targetDBName := dbEnv.Name
+		if name := strings.TrimSpace(GlobalSimulationConfig.DatabaseName); name != "" {
+			targetDBName = name
+		}
+
+		if err := dbmanager.EnsureDatabase(dbEnv.Host, dbEnv.Port, dbEnv.User, dbEnv.Pass, targetDBName); err != nil {
+			return fmt.Errorf("ensure database: %w", err)
+		}
+
 		//Connect to postgres
 		connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", //TODO: add SSL toggle in env
-			dbEnv.User, dbEnv.Pass, dbEnv.Host, dbEnv.Port, dbEnv.Name)
+			dbEnv.User, dbEnv.Pass, dbEnv.Host, dbEnv.Port, targetDBName)
 		db, err := sql.Open("postgres", connString)
 		if err != nil {
 			return fmt.Errorf("open DB connection: %w", err)
@@ -56,6 +66,10 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("DB ping: %w", err)
 		}
 		log.Println("Connected to Postgres!")
+
+		if err := dbmanager.ApplySchema(db, filepath.Join("db", "schemas")); err != nil {
+			return fmt.Errorf("apply schema: %w", err)
+		}
 		//Setup dbmanager to insert data every 2 seconds
 		//Now setup is done depending on the command - review later
 		queryManager = dbmanager.NewQueryManager(db)
@@ -84,6 +98,7 @@ var rootCmd = &cobra.Command{
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		// Close DB after command is done
 		attDataManager.Close(context.Background())
+		syncDataManager.Close(context.Background())
 		return nil
 	},
 }

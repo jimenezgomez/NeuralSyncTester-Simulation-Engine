@@ -12,16 +12,24 @@ func (tpm NoOverlapTPM) CreateStimulationStructure(n []int, k_last int) []int {
 	return k
 }
 
-func (tpm NoOverlapTPM) CreateStimulusFromLayerOutput(outputs []int, k_h int, n_h int) [][]int {
-	new_stimulus := make([][]int, k_h)
+func (tpm NoOverlapTPM) CreateStimulusFromLayerOutput(dst [][]int, outputs []int, k_h int, n_h int) [][]int {
+	if cap(dst) < k_h {
+		dst = make([][]int, k_h)
+	} else {
+		dst = dst[:k_h]
+	}
 	for i := 0; i < k_h; i++ {
-		new_stimulus[i] = make([]int, n_h)
+		if cap(dst[i]) < n_h {
+			dst[i] = make([]int, n_h)
+		} else {
+			dst[i] = dst[i][:n_h]
+		}
 		for j := 0; j < n_h; j++ {
-			new_stimulus[i][j] = outputs[n_h*i+j]
+			dst[i][j] = outputs[n_h*i+j]
 		}
 	}
 
-	return new_stimulus
+	return dst
 }
 
 func IntPow(base, exp int) int {

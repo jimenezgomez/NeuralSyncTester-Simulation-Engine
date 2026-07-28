@@ -26,13 +26,13 @@ CREATE TABLE IF NOT EXISTS attack_sessions (
     session_status TEXT
 );
 
-CREATE INDEX idx_attack_sessions_scnario_attack_h
+CREATE INDEX IF NOT EXISTS idx_attack_sessions_scnario_attack_h
     ON attack_sessions (scenario, attack_type, h);
 
-CREATE INDEX idx_attack_sessions_scenario_attack_size
+CREATE INDEX IF NOT EXISTS idx_attack_sessions_scenario_attack_size
     ON attack_sessions (scenario, attack_type, network_size);
 
-CREATE INDEX idx_attack_sessions_scenario_attack
+CREATE INDEX IF NOT EXISTS idx_attack_sessions_scenario_attack
     ON attack_sessions (scenario, attack_type);
 
 -- CREATE INDEX idx_attack_sessions_firstn_lastk

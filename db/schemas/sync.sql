@@ -21,12 +21,12 @@ CREATE TABLE IF NOT EXISTS sync_sessions (
     session_status TEXT
 );
 
-CREATE INDEX idx_sessions_scenario_rule_h
+CREATE INDEX IF NOT EXISTS idx_sessions_scenario_rule_h
     ON sync_sessions (scenario, learn_rule, h);
-CREATE INDEX idx_sessions_scenario_rule_size
+CREATE INDEX IF NOT EXISTS idx_sessions_scenario_rule_size
     ON sync_sessions (scenario, learn_rule, network_size);
 
-CREATE INDEX idx_sessions_scenario_rule
+CREATE INDEX IF NOT EXISTS idx_sessions_scenario_rule
     ON sync_sessions (scenario, learn_rule);
 
 -- CREATE INDEX idx_sessions_firstn_lastk
